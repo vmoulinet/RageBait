@@ -197,11 +197,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: mirror
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 675c46dee76eb634bbc69b8758522ec3,
-        type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -598,7 +593,7 @@ MonoBehaviour:
   m_AffectDiffuse: 1
   m_AffectSpecular: 1
   m_NonLightmappedOnly: 0
-  m_ShapeRadius: 0.025
+  m_ShapeRadius: 1.26
   m_SoftnessScale: 1
   m_UseCustomSpotLightShadowCone: 0
   m_CustomSpotLightShadowCone: 30
@@ -720,8 +715,8 @@ Light:
   serializedVersion: 12
   m_Type: 2
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 2818.7712
-  m_Range: 16.82
+  m_Intensity: 2743.468
+  m_Range: 2.23
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize2D: {x: 0.5, y: 0.5}
@@ -763,13 +758,13 @@ Light:
   m_LightShadowCasterMode: 2
   m_AreaSize: {x: 1, y: 1}
   m_BounceIntensity: 1
-  m_ColorTemperature: 6570
+  m_ColorTemperature: 15269
   m_UseColorTemperature: 1
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
-  m_ShadowRadius: 0
+  m_ShadowRadius: 1.26
   m_ShadowAngle: 0
   m_LightUnit: 0
   m_LuxAtDistance: 1
@@ -783,7 +778,7 @@ Transform:
   m_GameObject: {fileID: 423409735}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.84, y: 0.65, z: 5.39051}
+  m_LocalPosition: {x: -2.948, y: -0.261, z: 4.138}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1569,7 +1564,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &793998534
 Transform:
   m_ObjectHideFlags: 0
@@ -2566,11 +2561,11 @@ MonoBehaviour:
   maxDistance: 1.91
   maxSpeed: 1.85
   toleranceRadius: 3.03
-  spiralInterval: 200
+  spiralInterval: 19.9
   spiralDuration: 9.86
   spiralStrength: 1.55
   circleRadius: 1.56
-  circleHoldDuration: 1
+  circleHoldDuration: 5.47
   center: {x: 0, y: 0, z: 0}
 --- !u!1001 &1723029568
 PrefabInstance:

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(schtasks /query /fo LIST)",
+      "Bash(schtasks /query /fo CSV)",
+      "Bash(powershell.exe -Command \"Get-ScheduledTask | Where-Object { $_.TaskName -match ''shut|sleep|hibernate|power|off'' -or $_.Description -match ''shut|sleep|power'' } | Select-Object TaskName, TaskPath, State | Format-List\")",
+      "Bash(powershell.exe -Command \"Get-ScheduledTask | Where-Object { $_TaskName -match ''shut|sleep|hibernate|power'' } | Select-Object TaskName, TaskPath, State | Format-List\")",
+      "Bash(powershell.exe -File:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(dotnet --version)"
+    ]
+  }
+}
