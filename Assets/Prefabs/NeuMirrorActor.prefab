@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 378385514719684079}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.70710677, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: -0.40973738, y: 1.4270681, z: -0.34862816}
+  m_LocalPosition: {x: 0.012, y: 1.832, z: 0}
   m_LocalScale: {x: 2.8539276, y: 2.8539276, z: 2.8539276}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -86,8 +86,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.34292948, y: 1.1234004, z: 0.20687942}
-  m_Center: {x: 0, y: 0.5707272, z: 0}
+  m_Size: {x: 0.34292948, y: 1.1455989, z: 0.20687942}
+  m_Center: {x: 0, y: 0.559628, z: 0}
 --- !u!54 &3005334967331534866
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -131,7 +131,7 @@ MonoBehaviour:
   CurrentSpawnPoint: {fileID: 0}
   FrameRoot: {fileID: 0}
   WheelsRoot: {fileID: 0}
-  MirrorPivotX: {fileID: 0}
+  MirrorPivotX: {fileID: 3847452779503912560}
   IntactVisual: {fileID: 0}
   AgentA: {fileID: 0}
   AgentB: {fileID: 0}
@@ -143,10 +143,11 @@ MonoBehaviour:
   NoiseFrequency: 1
   PanelXAngle: 0
   PanelXSpeed: 180
-  PanelSpin: 1
+  PanelSpin: 0
   PanelSpinSpeed: 360
   PendulumTag: Pendulum
-  DebugDraw: 1
+  DebugDraw: 0
+  DebugPanel: 0
   CircleTarget: {x: 0, y: 0, z: 0}
 --- !u!1 &2574426292713246568
 GameObject:
@@ -267,7 +268,7 @@ Transform:
   m_GameObject: {fileID: 6763888452020302833}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.70710677, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0.12215734, y: 0.14619523, z: -0.14356965}
+  m_LocalPosition: {x: 0, y: 0.004309396, z: 0.004204719}
   m_LocalScale: {x: 0.3503943, y: 0.3503943, z: 0.3503943}
   m_ConstrainProportionsScale: 0
   m_Children: []

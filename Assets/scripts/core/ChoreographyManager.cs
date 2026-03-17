@@ -49,6 +49,9 @@ public class ChoreographyManager : MonoBehaviour
 	[Header("Circle")]
 	public float CircleRadius = 4f;
 	public float CircleHoldDuration = 2f;
+	public float CircleMoveTimeout = 6f;
+	public float CircleOrientTimeout = 3f;
+	public float CircleOrientationTolerance = 8f;
 
 	[Header("Chaos")]
 	public float ChaosStrength = 1.5f;
@@ -76,6 +79,7 @@ public class ChoreographyManager : MonoBehaviour
 	float spiralTimer;
 	float circleHoldTimer;
 	float debugLogTimer;
+	float circlePhaseTimer;
 
 	public void Initialize(SimulationManager sim)
 	{
@@ -224,6 +228,7 @@ public class ChoreographyManager : MonoBehaviour
 		CurrentState = ChoreographyState.Circle;
 		CurrentCirclePhase = CirclePhase.Move;
 		circleHoldTimer = 0f;
+		circlePhaseTimer = 0f;
 
 		ComputeCenter();
 		ComputeCircleTargets();
@@ -241,15 +246,47 @@ public class ChoreographyManager : MonoBehaviour
 
 	void UpdateCircleState()
 	{
+		circlePhaseTimer += Time.deltaTime;
+
 		if (CurrentCirclePhase == CirclePhase.Move)
 		{
 			if (AllAtTargets())
+			{
 				CurrentCirclePhase = CirclePhase.Orient;
+				circlePhaseTimer = 0f;
+
+				if (DebugChoreography)
+					Debug.Log("[choreography] circle phase move -> orient");
+			}
+			else if (circlePhaseTimer >= CircleMoveTimeout)
+			{
+				CurrentCirclePhase = CirclePhase.Orient;
+				circlePhaseTimer = 0f;
+
+				if (DebugChoreography)
+					Debug.Log("[choreography] circle move timeout -> orient");
+			}
 		}
 		else if (CurrentCirclePhase == CirclePhase.Orient)
 		{
 			if (AllOriented())
+			{
 				CurrentCirclePhase = CirclePhase.Hold;
+				circlePhaseTimer = 0f;
+				circleHoldTimer = 0f;
+
+				if (DebugChoreography)
+					Debug.Log("[choreography] circle phase orient -> hold");
+			}
+			else if (circlePhaseTimer >= CircleOrientTimeout)
+			{
+				CurrentCirclePhase = CirclePhase.Hold;
+				circlePhaseTimer = 0f;
+				circleHoldTimer = 0f;
+
+				if (DebugChoreography)
+					Debug.Log("[choreography] circle orient timeout -> hold");
+			}
 		}
 		else if (CurrentCirclePhase == CirclePhase.Hold)
 		{
@@ -345,7 +382,7 @@ public class ChoreographyManager : MonoBehaviour
 
 		for (int i = 0; i < actors.Count; i++)
 		{
-			if (!actors[i].IsOrientedToPoint(anchorPoint, 1f))
+			if (!actors[i].IsOrientedToPoint(anchorPoint, CircleOrientationTolerance))
 				return false;
 		}
 
@@ -411,7 +448,9 @@ public class ChoreographyManager : MonoBehaviour
 			" | active=" + actors.Count +
 			" | center=" + center.ToString("F2") +
 			" | anchor=" + anchor.ToString("F2") +
-			" | anchor_delta=" + (center - anchor).ToString("F2")
+			" | anchor_delta=" + (center - anchor).ToString("F2") +
+			" | circle_phase_timer=" + circlePhaseTimer.ToString("F2") +
+			" | circle_hold_timer=" + circleHoldTimer.ToString("F2")
 		);
 	}
 

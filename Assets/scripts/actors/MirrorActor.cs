@@ -37,12 +37,19 @@ public class MirrorActor : MonoBehaviour
 
 	[Header("Debug")]
 	public bool DebugDraw = true;
+	public bool DebugPanel = false;
 
 	[HideInInspector] public Vector3 CircleTarget;
 
 	Vector3 velocity;
+	Vector3 last_break_impact_velocity = Vector3.zero;
+	Vector3 last_break_impact_direction = Vector3.zero;
+	float last_break_impact_speed = 0f;
 	bool is_broken = false;
 	float panel_x_target = 0f;
+	float panel_x_current = 0f;
+	Quaternion panel_base_local_rotation = Quaternion.identity;
+	bool panel_base_rotation_cached = false;
 
 	public bool IsBroken
 	{
@@ -57,6 +64,30 @@ public class MirrorActor : MonoBehaviour
 		get
 		{
 			return velocity;
+		}
+	}
+
+	public Vector3 LastBreakImpactVelocity
+	{
+		get
+		{
+			return last_break_impact_velocity;
+		}
+	}
+
+	public Vector3 LastBreakImpactDirection
+	{
+		get
+		{
+			return last_break_impact_direction;
+		}
+	}
+
+	public float LastBreakImpactSpeed
+	{
+		get
+		{
+			return last_break_impact_speed;
 		}
 	}
 
@@ -84,14 +115,7 @@ public class MirrorActor : MonoBehaviour
 	{
 		get
 		{
-			if (MirrorPivotX == null)
-				return 0f;
-
-			float angle = MirrorPivotX.localEulerAngles.x;
-			if (angle > 180f)
-				angle -= 360f;
-
-			return angle;
+			return panel_x_current;
 		}
 	}
 
@@ -100,7 +124,9 @@ public class MirrorActor : MonoBehaviour
 		velocity = Random.insideUnitSphere * 0.3f;
 		velocity.y = 0f;
 
+		CachePanelBaseRotation();
 		panel_x_target = PanelXAngle;
+		panel_x_current = PanelXAngle;
 		ApplyPanelPoseImmediate();
 	}
 
@@ -109,12 +135,13 @@ public class MirrorActor : MonoBehaviour
 		if (is_broken)
 			return;
 
+		UpdatePanelX();
+
 		if (MirrorManager == null || MirrorManager.ChoreographyManager == null)
 			return;
 
 		UpdateMovement();
 		UpdateBodyRotation();
-		UpdatePanelX();
 
 		velocity *= Damping;
 		transform.position += velocity * Time.deltaTime;
@@ -270,10 +297,7 @@ public class MirrorActor : MonoBehaviour
 			return;
 
 		Quaternion target_rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
-		if (FrameRoot != null)
-			FrameRoot.rotation = Quaternion.Slerp(FrameRoot.rotation, target_rotation, RotationSpeed * Time.deltaTime);
-		else
-			transform.rotation = Quaternion.Slerp(transform.rotation, target_rotation, RotationSpeed * Time.deltaTime);
+		transform.rotation = Quaternion.Slerp(transform.rotation, target_rotation, RotationSpeed * Time.deltaTime);
 	}
 
 	void UpdatePanelX()
@@ -281,17 +305,25 @@ public class MirrorActor : MonoBehaviour
 		if (MirrorPivotX == null)
 			return;
 
+		CachePanelBaseRotation();
+
 		if (PanelSpin)
+			panel_x_current += PanelSpinSpeed * Time.deltaTime;
+		else
+			panel_x_current = Mathf.MoveTowards(panel_x_current, panel_x_target, PanelXSpeed * Time.deltaTime);
+
+		MirrorPivotX.localRotation = panel_base_local_rotation * Quaternion.AngleAxis(panel_x_current, Vector3.right);
+
+		if (DebugPanel && Time.frameCount % 20 == 0)
 		{
-			MirrorPivotX.Rotate(Vector3.right, PanelSpinSpeed * Time.deltaTime, Space.Self);
-			return;
+			Debug.Log(
+				name +
+				" | panel_spin=" + PanelSpin +
+				" | panel_x_current=" + panel_x_current.ToString("F2") +
+				" | panel_x_target=" + panel_x_target.ToString("F2") +
+				" | pivot=" + MirrorPivotX.name
+			);
 		}
-
-		float current_x = CurrentPanelXAngle;
-		float next_x = Mathf.MoveTowards(current_x, panel_x_target, PanelXSpeed * Time.deltaTime);
-
-		Vector3 euler = MirrorPivotX.localEulerAngles;
-		MirrorPivotX.localRotation = Quaternion.Euler(next_x, euler.y, euler.z);
 	}
 
 	Vector3 AnchorCouplingForce(ChoreographyManager choreography)
@@ -338,15 +370,16 @@ public class MirrorActor : MonoBehaviour
 
 		is_broken = false;
 
-		if (FrameRoot != null)
-			FrameRoot.rotation = spawn_point.transform.rotation;
-		else
-			transform.rotation = spawn_point.transform.rotation;
-
+		transform.rotation = spawn_point.transform.rotation;
 		transform.position = spawn_point.transform.position;
 
 		velocity = Vector3.zero;
+		last_break_impact_velocity = Vector3.zero;
+		last_break_impact_direction = Vector3.zero;
+		last_break_impact_speed = 0f;
+		CachePanelBaseRotation();
 		panel_x_target = 0f;
+		panel_x_current = 0f;
 		PanelSpin = false;
 		ApplyPanelPoseImmediate();
 
@@ -361,8 +394,17 @@ public class MirrorActor : MonoBehaviour
 		if (MirrorPivotX == null)
 			return;
 
-		Vector3 euler = MirrorPivotX.localEulerAngles;
-		MirrorPivotX.localRotation = Quaternion.Euler(panel_x_target, euler.y, euler.z);
+		CachePanelBaseRotation();
+		MirrorPivotX.localRotation = panel_base_local_rotation * Quaternion.AngleAxis(panel_x_current, Vector3.right);
+	}
+
+	void CachePanelBaseRotation()
+	{
+		if (MirrorPivotX == null || panel_base_rotation_cached)
+			return;
+
+		panel_base_local_rotation = MirrorPivotX.localRotation;
+		panel_base_rotation_cached = true;
 	}
 
 	public void SetPanelXTarget(float angle_degrees)
@@ -400,6 +442,28 @@ public class MirrorActor : MonoBehaviour
 		if (is_broken || !other.CompareTag(PendulumTag))
 			return;
 
+		PendulumManager pendulum = other.GetComponentInParent<PendulumManager>();
+		if (pendulum != null)
+		{
+			last_break_impact_velocity = pendulum.CurrentWorldVelocity;
+
+			Vector3 flat_direction = last_break_impact_velocity;
+			flat_direction.y = 0f;
+
+			if (flat_direction.sqrMagnitude > 0.0001f)
+				last_break_impact_direction = flat_direction.normalized;
+			else
+				last_break_impact_direction = pendulum.GetImpactDirection();
+
+			last_break_impact_speed = last_break_impact_velocity.magnitude;
+		}
+		else
+		{
+			last_break_impact_velocity = Vector3.zero;
+			last_break_impact_direction = Vector3.zero;
+			last_break_impact_speed = 0f;
+		}
+
 		Break(impact_point);
 	}
 
@@ -409,6 +473,17 @@ public class MirrorActor : MonoBehaviour
 
 		if (IntactVisual != null)
 			IntactVisual.SetActive(false);
+
+		if (DebugDraw)
+		{
+			Debug.Log(
+				name +
+				" | break | impact_point=" + impact_point.ToString("F2") +
+				" | impact_velocity=" + last_break_impact_velocity.ToString("F2") +
+				" | impact_direction=" + last_break_impact_direction.ToString("F2") +
+				" | impact_speed=" + last_break_impact_speed.ToString("F2")
+			);
+		}
 
 		if (MirrorManager != null)
 			MirrorManager.OnMirrorBroken(this, impact_point);
