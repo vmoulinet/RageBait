@@ -1,9 +1,24 @@
 fileFormatVersion: 2
-guid: ea0abad5b70d98246b44626f8b5910b0
+guid: 798454a23df365c419f889f16430cf81
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: BlackPlastic.001
+    second: {fileID: 2100000, guid: 351876daabea3d043a7fce0f85989485, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Blackmetal.001
+    second: {fileID: 2100000, guid: 2ee1bfd42d9c9cb4183357997ad7ab47, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mirror.001
+    second: {fileID: 2100000, guid: ad007f8739daee241a47a9990ecd3963, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
