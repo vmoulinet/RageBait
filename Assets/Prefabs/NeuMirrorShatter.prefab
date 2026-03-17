@@ -5243,7 +5243,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MirrorDebris
   BrokenMirrorPivotX: {fileID: 6672425824145849850}
   DebugDebris: 1
-  PendulumIgnoreDuration: 1
+  PendulumIgnoreDuration: 0.1
+  InheritedVelocityMultiplier: 0.65
+  DirectionalImpulseMultiplier: 1
+  MaxDirectionalImpulse: 15
 --- !u!1 &9127206241545630614
 GameObject:
   m_ObjectHideFlags: 0

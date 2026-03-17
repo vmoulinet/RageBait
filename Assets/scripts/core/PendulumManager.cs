@@ -25,6 +25,7 @@ public class PendulumManager : MonoBehaviour
 
 	LineRenderer line_renderer;
 	Rigidbody body;
+	bool warned_missing_root = false;
 
 	float phase;
 	float omega;
@@ -44,15 +45,20 @@ public class PendulumManager : MonoBehaviour
 		line_renderer = GetComponent<LineRenderer>();
 		body = GetComponent<Rigidbody>();
 
+		if (root == null && transform.parent != null)
+			root = transform.parent;
+
 		body.useGravity = false;
 		body.isKinematic = true;
 
 		line_renderer.useWorldSpace = true;
 		line_renderer.positionCount = 2;
+		line_renderer.enabled = enable_cable;
 		ApplyCableVisuals();
 
 		omega = Mathf.Sqrt(gravity / Mathf.Max(0.01f, cable_length));
 		last_world_position = transform.position;
+		RefreshCablePositions();
 	}
 
 	void Update()
@@ -68,6 +74,7 @@ public class PendulumManager : MonoBehaviour
 		Vector3 world_delta = transform.position - last_world_position;
 		current_world_velocity = world_delta / Mathf.Max(Time.deltaTime, 0.0001f);
 		last_world_position = transform.position;
+		RefreshCablePositions();
 	}
 
 	void LateUpdate()
@@ -78,13 +85,35 @@ public class PendulumManager : MonoBehaviour
 			return;
 		}
 
+		RefreshCablePositions();
+	}
+
+	void RefreshCablePositions()
+	{
+		if (line_renderer == null)
+			return;
+
 		line_renderer.enabled = enable_cable;
 		if (!enable_cable)
 			return;
 
-		if (root == null)
-			return;
+		if (root == null && transform.parent != null)
+			root = transform.parent;
 
+		if (root == null)
+		{
+			if (!warned_missing_root)
+			{
+				Debug.LogWarning(name + " | PendulumManager has no root assigned, using current position for cable start.");
+				warned_missing_root = true;
+			}
+
+			line_renderer.SetPosition(0, transform.position);
+			line_renderer.SetPosition(1, transform.position);
+			return;
+		}
+
+		warned_missing_root = false;
 		line_renderer.SetPosition(0, root.position);
 		line_renderer.SetPosition(1, transform.position);
 	}
@@ -117,8 +146,12 @@ public class PendulumManager : MonoBehaviour
 		if (line_renderer == null)
 			line_renderer = GetComponent<LineRenderer>();
 
+		if (root == null && transform.parent != null)
+			root = transform.parent;
+
 		ApplyCableVisuals();
 		omega = Mathf.Sqrt(gravity / Mathf.Max(0.01f, cable_length));
+		RefreshCablePositions();
 	}
 #endif
 }
