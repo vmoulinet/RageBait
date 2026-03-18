@@ -6,6 +6,7 @@ public class SimulationManager : MonoBehaviour
 	public MirrorManager MirrorManager;
 	public ChoreographyManager ChoreographyManager;
 	public WordManager WordManager;
+	public IOManager IOManager;
 
 	void Awake()
 	{
@@ -17,6 +18,9 @@ public class SimulationManager : MonoBehaviour
 
 		if (WordManager == null)
 			WordManager = GetComponent<WordManager>();
+
+		if (IOManager == null)
+			IOManager = GetComponent<IOManager>();
 	}
 
 	void Start()
@@ -39,9 +43,15 @@ public class SimulationManager : MonoBehaviour
 			return;
 		}
 
+		if (IOManager == null)
+			Debug.LogWarning("SimulationManager: IOManager reference is missing. OSC input will be disabled.");
+
 		MirrorManager.Initialize(this);
 		ChoreographyManager.Initialize(this);
 		WordManager.Initialize(this);
+
+		if (IOManager != null)
+			IOManager.Initialize(this);
 
 		MirrorManager.BootstrapMirrors();
 		ChoreographyManager.RefreshTargets();

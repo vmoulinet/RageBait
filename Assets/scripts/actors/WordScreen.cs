@@ -98,7 +98,7 @@ public class WordScreen : MonoBehaviour
 		if (DisplayCross != null)
 		{
 			DisplayCross.gameObject.SetActive(true);
-			DisplayCross.text = "X";
+			DisplayCross.text = "";
 			DisplayCross.color = BrokenTextColor;
 		}
 

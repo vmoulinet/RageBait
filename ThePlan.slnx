@@ -1,4 +1,6 @@
 ﻿<Solution>
+  <Project Path="extOSC.csproj" />
+  <Project Path="extOSC.Editor.csproj" />
   <Project Path="FMODUnityResonanceEditor.csproj" />
   <Project Path="FMODUnityEditor.csproj" />
   <Project Path="FMODUnity.csproj" />

@@ -1,0 +1,47 @@
+[00:18:44.161] Monitor démarré
+[00:18:44.166] OSC server sur port 8000
+[00:18:44.438] Pong reçu du contrôleur
+[00:18:46.287] Pong reçu du contrôleur
+[00:18:48.275] Pong reçu du contrôleur
+[00:18:50.313] Pong reçu du contrôleur
+[00:18:52.270] Pong reçu du contrôleur
+[00:18:54.318] Pong reçu du contrôleur
+[00:18:58.429] Pong reçu du contrôleur
+[00:19:00.373] Pong reçu du contrôleur
+[00:19:02.203] Pong reçu du contrôleur
+[00:19:04.252] Pong reçu du contrôleur
+[00:19:06.437] Pong reçu du contrôleur
+[00:19:08.246] Pong reçu du contrôleur
+[00:19:10.339] Pong reçu du contrôleur
+[00:19:10.751] STOMP  49.32 kg
+[00:19:12.239] Pong reçu du contrôleur
+[00:19:14.286] Pong reçu du contrôleur
+[00:19:16.334] Pong reçu du contrôleur
+[00:19:18.361] Pong reçu du contrôleur
+[00:19:22.273] Pong reçu du contrôleur
+[00:19:24.220] Pong reçu du contrôleur
+[00:19:26.276] Pong reçu du contrôleur
+[00:19:28.438] Pong reçu du contrôleur
+[00:19:30.261] Pong reçu du contrôleur
+[00:19:32.308] Pong reçu du contrôleur
+[00:19:34.255] Pong reçu du contrôleur
+[00:19:35.566] STOMP  36.57 kg
+[00:19:36.361] Pong reçu du contrôleur
+[00:19:37.499] STOMP  48.83 kg
+[00:19:38.417] Pong reçu du contrôleur
+[00:19:40.471] Pong reçu du contrôleur
+[00:19:42.532] Pong reçu du contrôleur
+[00:19:44.290] Pong reçu du contrôleur
+[00:19:46.374] Pong reçu du contrôleur
+[00:19:48.290] Pong reçu du contrôleur
+[00:19:52.277] Pong reçu du contrôleur
+[00:19:55.105] Pong reçu du contrôleur
+[00:19:56.301] Pong reçu du contrôleur
+[00:19:58.357] Pong reçu du contrôleur
+[00:20:00.368] Pong reçu du contrôleur
+[00:20:02.476] Pong reçu du contrôleur
+[00:20:04.258] Pong reçu du contrôleur
+[00:20:06.377] Pong reçu du contrôleur
+[00:20:08.428] Pong reçu du contrôleur
+[00:20:10.299] Pong reçu du contrôleur
+[00:20:12.347] Pong reçu du contrôleur
