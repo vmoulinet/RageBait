@@ -5242,7 +5242,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MirrorDebris
   BrokenMirrorPivotX: {fileID: 6672425824145849850}
-  DebugDebris: 1
+  DebugDebris: 0
   PendulumIgnoreDuration: 0.1
   InheritedVelocityMultiplier: 0.65
   DirectionalImpulseMultiplier: 1

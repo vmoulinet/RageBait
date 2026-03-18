@@ -2,8 +2,10 @@ using UnityEngine;
 
 public class SimulationManager : MonoBehaviour
 {
+	[Header("Managers")]
 	public MirrorManager MirrorManager;
 	public ChoreographyManager ChoreographyManager;
+	public WordManager WordManager;
 
 	void Awake()
 	{
@@ -12,6 +14,9 @@ public class SimulationManager : MonoBehaviour
 
 		if (ChoreographyManager == null)
 			ChoreographyManager = GetComponent<ChoreographyManager>();
+
+		if (WordManager == null)
+			WordManager = GetComponent<WordManager>();
 	}
 
 	void Start()
@@ -28,8 +33,15 @@ public class SimulationManager : MonoBehaviour
 			return;
 		}
 
+		if (WordManager == null)
+		{
+			Debug.LogError("SimulationManager: WordManager reference is missing.");
+			return;
+		}
+
 		MirrorManager.Initialize(this);
 		ChoreographyManager.Initialize(this);
+		WordManager.Initialize(this);
 
 		MirrorManager.BootstrapMirrors();
 		ChoreographyManager.RefreshTargets();

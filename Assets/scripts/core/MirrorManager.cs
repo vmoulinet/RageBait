@@ -11,6 +11,7 @@ public class MirrorManager : MonoBehaviour
 	public Transform ActiveMirrorsRoot;
 	public Transform DebrisRoot;
 	public ChoreographyManager ChoreographyManager;
+	public WordManager WordManager;
 
 	[Header("Counts")]
 	public int StartingMirrorCount = 6;
@@ -50,6 +51,14 @@ public class MirrorManager : MonoBehaviour
 		if (ChoreographyManager == null)
 			ChoreographyManager = sim.ChoreographyManager;
 
+		if (WordManager == null)
+			WordManager = sim.WordManager;
+
+		Debug.Log(
+			"[mirror_manager] initialize | choreography=" + (ChoreographyManager != null ? ChoreographyManager.name : "null") +
+			" | word_manager=" + (WordManager != null ? WordManager.name : "null")
+		);
+
 		CacheSpawnPoints();
 	}
 
@@ -84,6 +93,11 @@ public class MirrorManager : MonoBehaviour
 
 			yield return new WaitForSeconds(SpawnInterval);
 		}
+
+		Debug.Log(
+			"[mirror_manager] initial spawn finished | active=" + ActiveMirrors.Count +
+			" | word_manager=" + (WordManager != null ? WordManager.name : "null")
+		);
 	}
 
 	void CacheSpawnPoints()
@@ -111,6 +125,9 @@ public class MirrorManager : MonoBehaviour
 		mirror.transform.position += offset;
 
 		ActiveMirrors.Add(mirror);
+
+		if (WordManager != null)
+			WordManager.RegisterMirror(mirror);
 	}
 
 	Vector3 GetSpawnOffset(int spawnIndex)
@@ -139,6 +156,9 @@ public class MirrorManager : MonoBehaviour
 
 		SpawnDebris(mirror, impactPoint);
 		StartCoroutine(RespawnMirrorRoutine(mirror));
+
+		if (WordManager != null)
+			WordManager.OnMirrorBroken(mirror);
 
 		if (ChoreographyManager != null)
 			ChoreographyManager.RefreshTargets();

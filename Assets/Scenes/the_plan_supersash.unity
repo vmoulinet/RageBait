@@ -738,6 +738,7 @@ MonoBehaviour:
   ActiveMirrorsRoot: {fileID: 800881237}
   DebrisRoot: {fileID: 1005230618}
   ChoreographyManager: {fileID: 1758520097}
+  WordManager: {fileID: 1018003983}
   StartingMirrorCount: 7
   SpawnInterval: 3
   RespawnDelay: 1
@@ -1659,6 +1660,57 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2091444931}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1018003982
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1018003984}
+  - component: {fileID: 1018003983}
+  m_Layer: 0
+  m_Name: WordManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1018003983
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1018003982}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b1c481a8530d245a584de4a6921df4f9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WordManager
+  MirrorManager: {fileID: 645884744}
+  WordListAsset: {fileID: 4900000, guid: 4b9497fe386f4412d985dcfcdf4f5949, type: 3}
+  WordSlotCount: 7
+  GlobalRecentHistorySize: 64
+  DebugWords: 1
+  UseBrokenDelay: 1
+  BrokenDisplayDelay: 2
+--- !u!4 &1018003984
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1018003982}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.57092, y: 0, z: 18.15059}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1757729960}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1508065064
 GameObject:
   m_ObjectHideFlags: 0
@@ -1724,6 +1776,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SimulationManager
   MirrorManager: {fileID: 645884744}
   ChoreographyManager: {fileID: 1758520097}
+  WordManager: {fileID: 1018003983}
 --- !u!4 &1757729960
 Transform:
   m_ObjectHideFlags: 0
@@ -1739,6 +1792,7 @@ Transform:
   m_Children:
   - {fileID: 645884745}
   - {fileID: 1758520096}
+  - {fileID: 1018003984}
   - {fileID: 748073355}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
