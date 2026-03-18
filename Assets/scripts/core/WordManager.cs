@@ -220,6 +220,15 @@ public class WordManager : MonoBehaviour
 		return -1;
 	}
 
+	public bool IsSlotPending(int slot)
+	{
+		MirrorActor mirror = GetMirrorForSlot(slot);
+		if (mirror == null)
+			return false;
+
+		return pending_mirrors.Contains(mirror);
+	}
+
 	public void LogActiveWords()
 	{
 		if (!DebugWords)
