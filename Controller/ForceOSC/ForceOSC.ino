@@ -92,8 +92,8 @@ float readBatteryPct() {
 }
 
 // ─── WiFi ────────────────────────────────────────────────────────────────────
-const char* WIFI_SSID = "test";
-const char* WIFI_PASS = "internet";
+const char* WIFI_SSID = "Le_Moulin_2";
+const char* WIFI_PASS = "venasque";
 
 const unsigned int OSC_OUT_PORT = 8000;
 const unsigned int OSC_IN_PORT  = 8001;
