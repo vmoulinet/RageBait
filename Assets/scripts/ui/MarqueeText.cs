@@ -81,7 +81,7 @@ public class MarqueeText : MonoBehaviour
 		for (int i = 0; i < repeat_count; i++)
 			builder.Append(cycle_text);
 
-		text_component.enableWordWrapping = false;
+		text_component.textWrappingMode = TextWrappingModes.NoWrap;
 		text_component.overflowMode = TextOverflowModes.Overflow;
 		text_component.text = builder.ToString();
 		text_component.ForceMeshUpdate();

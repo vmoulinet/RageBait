@@ -117,7 +117,7 @@ MonoBehaviour:
   PanelSpin: 0
   PanelSpinSpeed: 360
   PendulumTag: Pendulum
-  DebugDraw: 1
+  DebugDraw: 0
   DebugPanel: 0
   CircleTarget: {x: 0, y: 0, z: 0}
 --- !u!65 &5825176515283663510

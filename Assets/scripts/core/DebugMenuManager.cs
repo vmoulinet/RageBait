@@ -39,7 +39,7 @@ public class DebugMenuManager : MonoBehaviour
 		if (VisualRoot != null)
 			VisualRoot.SetActive(open);
 
-		Time.timeScale = open ? 0f : 1f;
+	// pause on menu open	Time.timeScale = open ? 0f : 1f;
 		Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;
 		Cursor.visible = open;
 

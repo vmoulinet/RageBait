@@ -1,0 +1,13 @@
+[20:25:05.417] Monitor démarré
+[20:25:05.423] OSC server sur port 8000
+[20:26:24.328] Pong reçu du contrôleur
+[20:26:25.606] Pong reçu du contrôleur
+[20:26:27.592] Pong reçu du contrôleur
+[20:26:29.648] Pong reçu du contrôleur
+[20:26:31.546] Pong reçu du contrôleur
+[20:26:33.654] Pong reçu du contrôleur
+[20:26:35.638] Pong reçu du contrôleur
+[20:26:37.786] Pong reçu du contrôleur
+[20:26:39.721] Pong reçu du contrôleur
+[20:26:41.581] Pong reçu du contrôleur
+[20:26:43.629] Pong reçu du contrôleur
