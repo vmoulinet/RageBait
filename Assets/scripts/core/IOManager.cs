@@ -14,6 +14,8 @@ public class IOManager : MonoBehaviour
 	public int ListenPort = 8000;
 	public int PingPort = 8001;
 	public string PingHost = "255.255.255.255";
+	public string StompAddress = "/stomp";
+	public float DefaultDebugStompForce = 1f;
 
 	[Header("Sniffer")]
 	public string SniffAddress = "/*";
@@ -47,6 +49,9 @@ public class IOManager : MonoBehaviour
 	OSCReceiver receiver;
 	OSCTransmitter transmitter;
 	string last_pong_summary = "";
+	SimulationManager simulation_manager;
+	float last_stomp_force = 0f;
+	float last_stomp_time = -999f;
 
 	readonly List<string> recent_packets = new List<string>();
 	readonly Queue<string> log_lines = new Queue<string>();
@@ -117,8 +122,25 @@ public class IOManager : MonoBehaviour
 		}
 	}
 
+	public float LastStompForce
+	{
+		get
+		{
+			return last_stomp_force;
+		}
+	}
+
+	public float LastStompTime
+	{
+		get
+		{
+			return last_stomp_time;
+		}
+	}
+
 	public void Initialize(SimulationManager sim)
 	{
+		simulation_manager = sim;
 		InitializeReceiver();
 		InitializeTransmitter();
 		ping_timer = PingInterval;
@@ -161,6 +183,7 @@ public class IOManager : MonoBehaviour
 			" | listen_port=" + ListenPort +
 			" | ping_port=" + PingPort +
 			" | ping_host=" + (string.IsNullOrWhiteSpace(PingHost) ? "255.255.255.255" : PingHost.Trim()) +
+			" | stomp_address=" + StompAddress +
 			" | sniff_address=" + sniff_address
 		);
 	}
@@ -369,6 +392,54 @@ public class IOManager : MonoBehaviour
 		LogText.text = string.Join("\n", lines);
 	}
 
+	void TryHandleStomp(OSCMessage message)
+	{
+		if (message == null)
+			return;
+
+		if (string.IsNullOrWhiteSpace(StompAddress))
+			return;
+
+		if (message.Address != StompAddress)
+			return;
+
+		float stomp_force = DefaultDebugStompForce;
+
+		if (message.Values != null && message.Values.Count > 0)
+		{
+			OSCValue first_value = message.Values[0];
+			if (first_value != null)
+			{
+				switch (first_value.Type)
+				{
+					case OSCValueType.Float:
+						stomp_force = first_value.FloatValue;
+						break;
+
+					case OSCValueType.Double:
+						stomp_force = (float)first_value.DoubleValue;
+						break;
+
+					case OSCValueType.Int:
+						stomp_force = first_value.IntValue;
+						break;
+
+					case OSCValueType.Long:
+						stomp_force = first_value.LongValue;
+						break;
+				}
+			}
+		}
+
+		last_stomp_force = stomp_force;
+		last_stomp_time = Time.unscaledTime;
+
+		AddLog("[state] stomp", "force=" + stomp_force.ToString("F3"));
+
+		if (simulation_manager != null && simulation_manager.EventManager != null)
+			simulation_manager.EventManager.NotifyStomp(stomp_force, "osc");
+	}
+
 	void OnOscMessageReceived(OSCMessage message)
 	{
 		total_packets_received++;
@@ -382,6 +453,7 @@ public class IOManager : MonoBehaviour
 
 		if (DebugLogPackets)
 			Debug.Log("[osc] " + packet_summary);
+		TryHandleStomp(message);
 
 		if (message != null && message.Address == "/pong")
 		{

@@ -70,8 +70,7 @@ public class SimulationManager : MonoBehaviour
 		MirrorManager.Initialize(this);
 		ChoreographyManager.Initialize(this);
 		WordManager.Initialize(this);
-		EventManager.Initialize(this);
-		VideoManager.Initialize(this);
+
 
 		if (IOManager != null)
 			IOManager.Initialize(this);
