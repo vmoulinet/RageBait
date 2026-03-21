@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-4659735356736607615
+--- !u!114 &-3036857827423992055
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -19,7 +19,7 @@ MonoBehaviour:
     Data3: -1865944156
     Data4: 460263626
   Banks:
-  - {fileID: -4636400162633876970}
+  - {fileID: 4149941550207601472}
   IsStream: 0
   Is3D: 1
   IsOneShot: 1
@@ -27,73 +27,7 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 6342
---- !u!114 &-4636400162633876970
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
-  m_Name: bank:/Master.bank
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
-  Path: Assets/BANKS/Desktop/Master.bank
-  Name: Master
-  StudioPath: bank:/Master
-  lastModified: 639038357188449620
-  FileSizes:
-  - Name: Desktop
-    Value: 44224
-  Exists: 1
---- !u!114 &-597498247918958852
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
-  m_Name: bank:/pendule.bank
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
-  Path: Assets/BANKS/Desktop/pendule.bank
-  Name: pendule
-  StudioPath: 
-  lastModified: 639096867027504750
-  FileSizes:
-  - Name: Desktop
-    Value: 3888672
-  Exists: 1
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d32cf7c32a3ed8347bac48ef5ed56d82, type: 3}
-  m_Name: FMODStudioCache
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EventCache
-  EditorBanks:
-  - {fileID: 5482466835835480565}
-  - {fileID: -4636400162633876970}
-  - {fileID: 2481432717894247601}
-  - {fileID: -597498247918958852}
-  EditorEvents:
-  - {fileID: -4659735356736607615}
-  EditorParameters: []
-  MasterBanks:
-  - {fileID: -4636400162633876970}
-  StringsBanks:
-  - {fileID: 5482466835835480565}
-  cacheTime: 0
-  cacheVersion: 131634
---- !u!114 &2481432717894247601
+--- !u!114 &-2664052545643781676
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -109,11 +43,56 @@ MonoBehaviour:
   Name: glass
   StudioPath: 
   lastModified: 639096867026780117
-  FileSizes:
-  - Name: Desktop
-    Value: 476096
+  FileSizes: []
   Exists: 1
---- !u!114 &5482466835835480565
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d32cf7c32a3ed8347bac48ef5ed56d82, type: 3}
+  m_Name: FMODStudioCache
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EventCache
+  EditorBanks:
+  - {fileID: 2745853975616883431}
+  - {fileID: -2664052545643781676}
+  - {fileID: 4149941550207601472}
+  - {fileID: 2108209438836949041}
+  EditorEvents:
+  - {fileID: -3036857827423992055}
+  EditorParameters: []
+  MasterBanks:
+  - {fileID: 4149941550207601472}
+  StringsBanks:
+  - {fileID: 2745853975616883431}
+  cacheVersion: 131858
+  cacheTime: 639096867027504750
+  SerializableEventsDict:
+  - key: event:/Note
+    index: 0
+--- !u!114 &2108209438836949041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/pendule.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: Assets/BANKS/Desktop/pendule.bank
+  Name: pendule
+  StudioPath: 
+  lastModified: 639096867027504750
+  FileSizes: []
+  Exists: 1
+--- !u!114 &2745853975616883431
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -130,6 +109,24 @@ MonoBehaviour:
   StudioPath: bank:/Master.strings
   lastModified: 639038357188461777
   FileSizes:
-  - Name: Desktop
+  - Name: 
     Value: 804
+  Exists: 1
+--- !u!114 &4149941550207601472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Master.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: Assets/BANKS/Desktop/Master.bank
+  Name: Master
+  StudioPath: bank:/Master
+  lastModified: 639038357188449620
+  FileSizes: []
   Exists: 1

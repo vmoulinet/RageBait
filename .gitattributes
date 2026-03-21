@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# FMOD banks - binary files, never normalize
+*.bank binary
+*.bank.meta text

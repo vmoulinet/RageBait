@@ -1451,9 +1451,6 @@ MonoBehaviour:
   SpawnInterval: 3
   RespawnDelay: 1
   RespawnRingSpacing: 0.75
-  SeparationRadius: 1
-  SeparationStrength: 10
-  MaxSpeed: 0.8
   DebrisForce: 9
   DebrisRadius: 7
   DebrisUpwardModifier: 1
@@ -1998,9 +1995,26 @@ MonoBehaviour:
   ListenAddress: 255.255.255.255
   ListenPort: 8000
   PingPort: 8001
+  PingHost: 255.255.255.255
+  StompAddress: /stomp
+  DefaultDebugStompForce: 1
   SniffAddress: /stomp
+  LogText: {fileID: 0}
+  MaxLogLines: 20
+  ControllerStatusText: {fileID: 0}
+  WifiQualityText: {fileID: 0}
+  ConnectedColor: {r: 0, g: 1, b: 0, a: 1}
+  DisconnectedColor: {r: 1, g: 0, b: 0, a: 1}
+  UnknownColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  EnablePing: 1
+  PingInterval: 5
+  PingAddress: /ping
+  PongTimeout: 8
+  EnableWifiPolling: 1
+  WifiPollInterval: 2
   DebugLogPackets: 1
   MaxStoredPackets: 32
+  LogSentMessages: 1
 --- !u!1 &793998533
 GameObject:
   m_ObjectHideFlags: 0
@@ -2049,8 +2063,14 @@ MonoBehaviour:
   target: {fileID: 2123217522}
   maxPoints: 10
   minDistance: 0.05
-  lineColor: {r: 0, g: 1, b: 1, a: 1}
+  lineColor:
+    r: 0
+    g: 1
+    b: 1
+    a: 1
   lineWidth: 0.02
+  line: {fileID: 0}
+  points: []
 --- !u!120 &793998536
 LineRenderer:
   serializedVersion: 3
@@ -2333,6 +2353,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DebugBreakerSphere_XZ
   moveSpeed: 15
   planeY: 0.39
+  rb: {fileID: 0}
+  cam: {fileID: 0}
 --- !u!135 &960283321
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -4598,6 +4620,8 @@ MonoBehaviour:
   ChoreographyManager: {fileID: 1758520097}
   WordManager: {fileID: 1018003983}
   IOManager: {fileID: 748073356}
+  EventManager: {fileID: 0}
+  VideoManager: {fileID: 0}
 --- !u!4 &1757729960
 Transform:
   m_ObjectHideFlags: 0
@@ -4664,18 +4688,34 @@ MonoBehaviour:
   MirrorManager: {fileID: 645884744}
   ChoreographyAnchor: {fileID: 1931337003}
   CurrentState: 0
-  AutoCycle: 1
   DebugChoreography: 0
-  DebugPartners: 0
   DebugCircleTargets: 0
   DebugLogInterval: 1
+  DebugTriangleLinks: 0
+  DebugTriangleLineMaterial: {fileID: 0}
+  DebugTriangleLineWidth: 0.03
+  DebugTriangleLineHeight: 0.15
   TriangleMinDistance: 1
   TriangleMaxDistance: 2
-  MaxSpeed: 2
   ToleranceRadius: 0.05
+  TriangleStableDistanceTolerance: 0.5
+  TriangleStableSpeedThreshold: 0.45
+  TriangleStableHoldDuration: 1.2
+  TriangleStableAverageSpeedThreshold: 0.25
+  TriangleStableAnchorDistanceTolerance: 6
+  TriangleStableCenterDistanceTolerance: 0.75
+  TriangleStablePartnerDistanceTolerance: 2.5
+  TriangleStablePartnerDistanceVarianceTolerance: 2
   AnchorPullStrength: 0.35
   AnchorOuterLimit: 10
   AnchorOuterPullStrength: 2.5
+  PatternDurationMin: 4
+  PatternDurationMax: 8
+  IncludeSpiral: 1
+  IncludeCircle: 1
+  IncludeChaos: 1
+  IncludeScatter: 1
+  IncludeLine: 1
   SpiralInterval: 30
   SpiralDuration: 6
   SpiralStrength: 0.8
@@ -4941,9 +4981,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1823688467}
   - component: {fileID: 1823688466}
-  - component: {fileID: 1823688465}
   - component: {fileID: 1823688468}
   - component: {fileID: 1823688469}
+  - component: {fileID: 1823688470}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -4951,14 +4991,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &1823688465
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1823688464}
-  m_Enabled: 1
 --- !u!20 &1823688466
 Camera:
   m_ObjectHideFlags: 0
@@ -5181,6 +5213,21 @@ MonoBehaviour:
   zoomSpeed: 10
   minZoom: 5
   maxZoom: 100
+  dragOrigin: {x: 0, y: 0, z: 0}
+--- !u!114 &1823688470
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1823688464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86c6556701af9e04380698b89f691b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FMODUnity::FMODUnity.StudioListener
+  nonRigidbodyVelocity: 0
+  attenuationObject: {fileID: 0}
 --- !u!1 &1854827677
 GameObject:
   m_ObjectHideFlags: 0
@@ -5508,6 +5555,7 @@ GameObject:
   - component: {fileID: 2123217525}
   - component: {fileID: 2123217526}
   - component: {fileID: 2123217527}
+  - component: {fileID: 2123217528}
   m_Layer: 0
   m_Name: Pendulum
   m_TagString: Pendulum
@@ -5812,6 +5860,37 @@ MonoBehaviour:
   cable_material: {fileID: 0}
   cable_color: {r: 0, g: 0, b: 0, a: 1}
   cable_width: 0.03
+--- !u!114 &2123217528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2123217518}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a6610d2e704f1648819acc8d7460285, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: FMODUnity::FMODUnity.StudioEventEmitter
+  CollisionTag: 
+  EventReference:
+    Guid:
+      Data1: 0
+      Data2: 0
+      Data3: 0
+      Data4: 0
+    Path: 
+  Event: 
+  EventPlayTrigger: 7
+  EventStopTrigger: 0
+  AllowFadeout: 1
+  TriggerOnce: 0
+  Preload: 0
+  NonRigidbodyVelocity: 0
+  Params: []
+  OverrideAttenuation: 0
+  OverrideMinDistance: -1
+  OverrideMaxDistance: -1
 --- !u!1001 &6839320404257854846
 PrefabInstance:
   m_ObjectHideFlags: 0
