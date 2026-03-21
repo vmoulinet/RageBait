@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-4659735356736607615
+--- !u!114 &-6467189727448868397
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -9,25 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
-  m_Name: event:/Note
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
-  Path: event:/Note
-  Guid:
-    Data1: -32302344
-    Data2: 1285233446
-    Data3: -1865944156
-    Data4: 460263626
-  Banks:
-  - {fileID: -4636400162633876970}
-  IsStream: 0
-  Is3D: 1
-  IsOneShot: 1
-  Parameters: []
-  MinDistance: 1
-  MaxDistance: 20
-  Length: 6342
---- !u!114 &-4636400162633876970
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/glass.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: Assets/BANKS/Desktop/glass.bank
+  Name: glass
+  StudioPath: bank:/glass
+  lastModified: 639096919779749169
+  FileSizes: []
+  Exists: 1
+--- !u!114 &-5270939757522057236
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -42,12 +33,10 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639038357188449620
-  FileSizes:
-  - Name: Desktop
-    Value: 44224
+  lastModified: 639096919779834384
+  FileSizes: []
   Exists: 1
---- !u!114 &-597498247918958852
+--- !u!114 &-1817744142125450465
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -56,17 +45,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
-  m_Name: bank:/pendule.bank
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
-  Path: Assets/BANKS/Desktop/pendule.bank
-  Name: pendule
-  StudioPath: 
-  lastModified: 639096867027504750
-  FileSizes:
-  - Name: Desktop
-    Value: 3888672
-  Exists: 1
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/pendule
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/pendule
+  Guid:
+    Data1: 977442114
+    Data2: 1110307380
+    Data3: 619915708
+    Data4: -2053382999
+  Banks:
+  - {fileID: 2572411926740185181}
+  IsStream: 1
+  Is3D: 1
+  IsOneShot: 0
+  Parameters:
+  - {fileID: 4874550985205569271}
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -80,40 +77,26 @@ MonoBehaviour:
   m_Name: FMODStudioCache
   m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EventCache
   EditorBanks:
-  - {fileID: 5482466835835480565}
-  - {fileID: -4636400162633876970}
-  - {fileID: 2481432717894247601}
-  - {fileID: -597498247918958852}
+  - {fileID: 1021524609466712441}
+  - {fileID: -6467189727448868397}
+  - {fileID: -5270939757522057236}
+  - {fileID: 2572411926740185181}
   EditorEvents:
-  - {fileID: -4659735356736607615}
+  - {fileID: 7358259826572579743}
+  - {fileID: -1817744142125450465}
   EditorParameters: []
   MasterBanks:
-  - {fileID: -4636400162633876970}
+  - {fileID: -5270939757522057236}
   StringsBanks:
-  - {fileID: 5482466835835480565}
-  cacheTime: 0
-  cacheVersion: 131634
---- !u!114 &2481432717894247601
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
-  m_Name: bank:/glass.bank
-  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
-  Path: Assets/BANKS/Desktop/glass.bank
-  Name: glass
-  StudioPath: 
-  lastModified: 639096867026780117
-  FileSizes:
-  - Name: Desktop
-    Value: 476096
-  Exists: 1
---- !u!114 &5482466835835480565
+  - {fileID: 1021524609466712441}
+  cacheVersion: 131858
+  cacheTime: 639096919817147608
+  SerializableEventsDict:
+  - key: event:/glass_break
+    index: 0
+  - key: event:/pendule
+    index: 1
+--- !u!114 &1021524609466712441
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -128,8 +111,77 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639038357188461777
+  lastModified: 639096919779854451
   FileSizes:
-  - Name: Desktop
-    Value: 804
+  - Name: 
+    Value: 964
   Exists: 1
+--- !u!114 &2572411926740185181
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/pendule.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: Assets/BANKS/Desktop/pendule.bank
+  Name: pendule
+  StudioPath: bank:/pendule
+  lastModified: 639096919817147608
+  FileSizes: []
+  Exists: 1
+--- !u!114 &4874550985205569271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fecb8ef7f94ca804a8ab72049b86782e, type: 3}
+  m_Name: parameter:/pendule/pendulum swim
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorParamRef
+  Name: pendulum swim
+  StudioPath: 
+  Min: -19.7
+  Max: 19.7
+  Default: 0
+  ID:
+    data1: 608929514
+    data2: 126804120
+  Type: 0
+  IsGlobal: 0
+  Labels: []
+  Exists: 1
+--- !u!114 &7358259826572579743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/glass_break
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/glass_break
+  Guid:
+    Data1: 1220481391
+    Data2: 1193162979
+    Data3: -103190604
+    Data4: -353321416
+  Banks:
+  - {fileID: -6467189727448868397}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2000
