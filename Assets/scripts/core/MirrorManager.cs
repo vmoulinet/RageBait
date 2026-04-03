@@ -210,13 +210,15 @@ public class MirrorManager : MonoBehaviour
 		if (mirror == null)
 			yield break;
 
+		if (spawnPoints.Count == 0)
+			yield break;
+
 		int respawnIndex = GetActiveMirrorIndex(mirror);
 		if (respawnIndex < 0)
 			respawnIndex = 0;
 
 		MirrorSpawnPoint spawnPoint = spawnPoints[respawnIndex % spawnPoints.Count];
 		mirror.ResetToSpawn(spawnPoint);
-		mirror.ApplySpawnOffset(GetSpawnOffset(respawnIndex));
 
 		if (ChoreographyManager != null)
 			ChoreographyManager.RefreshTargets();

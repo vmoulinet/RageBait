@@ -216,38 +216,14 @@ public class ChoreographyManager : MonoBehaviour
 		for (int i = 0; i < actors.Count; i++)
 		{
 			MirrorActor actor = actors[i];
-			MirrorActor nearest_a = null;
-			MirrorActor nearest_b = null;
-			float nearest_a_distance = float.MaxValue;
-			float nearest_b_distance = float.MaxValue;
-			Vector3 actor_pos = actor.WorldPosition;
-			actor_pos.y = 0f;
+			List<MirrorActor> others = new List<MirrorActor>(actors);
+			others.Remove(actor);
 
-			for (int j = 0; j < actors.Count; j++)
-			{
-				if (i == j)
-					continue;
+			MirrorActor partner_a = others[UnityEngine.Random.Range(0, others.Count)];
+			others.Remove(partner_a);
+			MirrorActor partner_b = others[UnityEngine.Random.Range(0, others.Count)];
 
-				MirrorActor candidate = actors[j];
-				Vector3 candidate_pos = candidate.WorldPosition;
-				candidate_pos.y = 0f;
-				float distance = Vector3.Distance(actor_pos, candidate_pos);
-
-				if (distance < nearest_a_distance)
-				{
-					nearest_b = nearest_a;
-					nearest_b_distance = nearest_a_distance;
-					nearest_a = candidate;
-					nearest_a_distance = distance;
-				}
-				else if (distance < nearest_b_distance)
-				{
-					nearest_b = candidate;
-					nearest_b_distance = distance;
-				}
-			}
-
-			trianglePartners[actor] = new MirrorActor[] { nearest_a, nearest_b };
+			trianglePartners[actor] = new MirrorActor[] { partner_a, partner_b };
 		}
 	}
 
@@ -409,14 +385,7 @@ public class ChoreographyManager : MonoBehaviour
 		lastTriangleAverageDistanceToTarget = 0f;
 		lastTriangleMaxDistanceToTarget = 0f;
 
-		float effective_center_tolerance = Mathf.Max(TriangleStableCenterDistanceTolerance, 1.0f);
-		if (center_distance_to_anchor > effective_center_tolerance)
-		{
-			lastTriangleUnstableReason = "center_to_anchor:" + center_distance_to_anchor.ToString("F3");
-			return false;
-		}
-
-		if (average_speed > TriangleStableAverageSpeedThreshold)
+if (average_speed > TriangleStableAverageSpeedThreshold)
 		{
 			lastTriangleUnstableReason = "average_speed:" + average_speed.ToString("F3");
 			return false;
@@ -428,66 +397,6 @@ public class ChoreographyManager : MonoBehaviour
 			return false;
 		}
 
-		EnsureTrianglePartners();
-
-		float total_partner_distance = 0f;
-		float max_partner_distance = 0f;
-
-		for (int i = 0; i < actors.Count; i++)
-		{
-			MirrorActor actor = actors[i];
-			if (!trianglePartners.TryGetValue(actor, out MirrorActor[] partners) || partners == null || partners.Length < 2)
-			{
-				lastTriangleUnstableReason = "partner_map_missing:" + actor.name;
-				return false;
-			}
-
-			MirrorActor partner_a = partners[0];
-			MirrorActor partner_b = partners[1];
-			if (partner_a == null || partner_b == null)
-			{
-				lastTriangleUnstableReason = "partner_null:" + actor.name;
-				return false;
-			}
-
-			Vector3 actor_pos = actor.WorldPosition;
-			actor_pos.y = 0f;
-
-			Vector3 partner_a_pos = partner_a.WorldPosition;
-			partner_a_pos.y = 0f;
-
-			Vector3 partner_b_pos = partner_b.WorldPosition;
-			partner_b_pos.y = 0f;
-
-			float distance_a = Vector3.Distance(actor_pos, partner_a_pos);
-			float distance_b = Vector3.Distance(actor_pos, partner_b_pos);
-
-			float local_partner_average = (distance_a + distance_b) * 0.5f;
-			float local_partner_deviation = Mathf.Abs(distance_a - distance_b);
-
-			total_partner_distance += local_partner_average;
-			if (local_partner_average > max_partner_distance)
-				max_partner_distance = local_partner_average;
-
-			if (local_partner_average > TriangleStablePartnerDistanceTolerance)
-			{
-				lastTriangleAverageDistanceToTarget = total_partner_distance / Mathf.Max(1, i + 1);
-				lastTriangleMaxDistanceToTarget = max_partner_distance;
-				lastTriangleUnstableReason = "partner_distance:" + actor.name + ":" + local_partner_average.ToString("F3");
-				return false;
-			}
-
-			if (local_partner_deviation > TriangleStablePartnerDistanceVarianceTolerance)
-			{
-				lastTriangleAverageDistanceToTarget = total_partner_distance / Mathf.Max(1, i + 1);
-				lastTriangleMaxDistanceToTarget = max_partner_distance;
-				lastTriangleUnstableReason = "partner_variance:" + actor.name + ":" + local_partner_deviation.ToString("F3");
-				return false;
-			}
-		}
-
-		lastTriangleAverageDistanceToTarget = total_partner_distance / actors.Count;
-		lastTriangleMaxDistanceToTarget = max_partner_distance;
 		lastTriangleUnstableReason = "stable";
 		return true;
 	}
@@ -652,6 +561,42 @@ public class ChoreographyManager : MonoBehaviour
 		return start + direction * (index * LineSpacing);
 	}
 
+	public bool IsMirrorAtTrianglePosition(MirrorActor actor)
+	{
+		if (actor == null || actor.IsBroken)
+			return false;
+
+		if (actor.PlanarVelocity.magnitude > TriangleStableSpeedThreshold)
+			return false;
+
+		EnsureTrianglePartners();
+		if (!trianglePartners.TryGetValue(actor, out MirrorActor[] partners) || partners == null || partners.Length < 2)
+			return false;
+
+		MirrorActor partner_a = partners[0];
+		MirrorActor partner_b = partners[1];
+		if (partner_a == null || partner_b == null)
+			return false;
+
+		Vector3 pos = actor.WorldPosition; pos.y = 0f;
+		Vector3 a = partner_a.WorldPosition; a.y = 0f;
+		Vector3 b = partner_b.WorldPosition; b.y = 0f;
+
+		float dist_a = Vector3.Distance(pos, a);
+		float dist_b = Vector3.Distance(pos, b);
+		float local_avg = (dist_a + dist_b) * 0.5f;
+
+		return local_avg <= TriangleStablePartnerDistanceTolerance;
+	}
+
+	public MirrorActor[] GetTrianglePartnersFor(MirrorActor actor)
+	{
+		EnsureTrianglePartners();
+		if (trianglePartners.TryGetValue(actor, out MirrorActor[] partners))
+			return partners;
+		return null;
+	}
+
 	public Vector3 GetTriangleTargetFor(MirrorActor actor)
 	{
 		List<MirrorActor> actors = GetActiveActors();
@@ -689,10 +634,16 @@ public class ChoreographyManager : MonoBehaviour
 		Vector3 target_positive = mid + normal * target_distance;
 		Vector3 target_negative = mid - normal * target_distance;
 
-		float positive_anchor_distance = Vector3.Distance(target_positive, anchor);
-		float negative_anchor_distance = Vector3.Distance(target_negative, anchor);
+		Vector3 flat_pos = current_position;
+		flat_pos.y = 0f;
+		float dist_to_anchor = Vector3.Distance(flat_pos, anchor);
 
-		Vector3 target = positive_anchor_distance <= negative_anchor_distance ? target_positive : target_negative;
+		Vector3 target;
+		if (dist_to_anchor > AnchorOuterLimit)
+			target = Vector3.Distance(target_positive, anchor) <= Vector3.Distance(target_negative, anchor) ? target_positive : target_negative;
+		else
+			target = signed_distance >= 0f ? target_positive : target_negative;
+
 		return ApplyAnchorCoupling(target);
 	}
 

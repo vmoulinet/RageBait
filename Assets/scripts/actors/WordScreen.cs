@@ -36,6 +36,12 @@ public class WordScreen : MonoBehaviour
 		RefreshVisual();
 	}
 
+	void OnEnable()
+	{
+		if (property_block == null)
+			property_block = new MaterialPropertyBlock();
+	}
+
 	void Update()
 	{
 		if (RefreshEveryFrame)
