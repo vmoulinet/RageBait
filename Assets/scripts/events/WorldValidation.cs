@@ -47,6 +47,8 @@ public class WorldValidation : MonoBehaviour
 	Rigidbody[] cached_bodies;
 	bool[] cached_use_gravity;
 	float[] cached_damping;
+	int debris_layer = -1;
+	bool debris_collision_was_enabled = true;
 
 	public Phase CurrentPhase => current_phase;
 	public bool IsActive => current_phase != Phase.Idle && current_phase != Phase.Done;
@@ -84,6 +86,7 @@ public class WorldValidation : MonoBehaviour
 
 		SaveState();
 		SetGravity(false);
+		DisableDebrisCollisions();
 		ApplyInitialSpin();
 
 		current_phase = Phase.Attract;
@@ -133,7 +136,10 @@ public class WorldValidation : MonoBehaviour
 		phase_timer = 0f;
 
 		if (next == Phase.Done)
+		{
 			RestoreState();
+			RestoreDebrisCollisions();
+		}
 	}
 
 	void ApplyInitialSpin()
@@ -280,5 +286,33 @@ public class WorldValidation : MonoBehaviour
 			if (cached_bodies[i] != null)
 				cached_bodies[i].useGravity = enabled;
 		}
+	}
+
+	void DisableDebrisCollisions()
+	{
+		debris_layer = LayerMask.NameToLayer("Debris");
+		if (debris_layer < 0)
+		{
+			if (DebugLog)
+				Debug.LogWarning("[world_validation] layer 'Debris' not found, skipping collision disable");
+			return;
+		}
+
+		debris_collision_was_enabled = !Physics.GetIgnoreLayerCollision(debris_layer, debris_layer);
+		Physics.IgnoreLayerCollision(debris_layer, debris_layer, true);
+
+		if (DebugLog)
+			Debug.Log("[world_validation] debris-debris collisions disabled");
+	}
+
+	void RestoreDebrisCollisions()
+	{
+		if (debris_layer < 0)
+			return;
+
+		Physics.IgnoreLayerCollision(debris_layer, debris_layer, !debris_collision_was_enabled);
+
+		if (DebugLog)
+			Debug.Log("[world_validation] debris-debris collisions restored");
 	}
 }

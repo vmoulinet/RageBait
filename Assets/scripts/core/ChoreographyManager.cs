@@ -35,14 +35,12 @@ public class ChoreographyManager : MonoBehaviour
 	public float TriangleMinDistance = 1f;
 	public float TriangleMaxDistance = 2.5f;
 	public float ToleranceRadius = 0.05f;
-	public float TriangleStableDistanceTolerance = 0.5f;
+	public float TriangleStableDistanceTolerance = 0.34f;
+	public float TriangleStableDistanceHysteresis = 0.6f;
 	public float TriangleStableSpeedThreshold = 0.45f;
 	public float TriangleStableHoldDuration = 1.2f;
 	public float TriangleStableAverageSpeedThreshold = 0.25f;
-	public float TriangleStableAnchorDistanceTolerance = 6f;
 	public float TriangleStableCenterDistanceTolerance = 0.75f;
-	public float TriangleStablePartnerDistanceTolerance = 2.5f;
-	public float TriangleStablePartnerDistanceVarianceTolerance = 2.0f;
 	public float PendulumExclusionHalfWidth = 0.1f;
 	public Transform DaddyTransform;
 	public float DaddyGazeHoldDuration = 2f;
@@ -120,6 +118,8 @@ public class ChoreographyManager : MonoBehaviour
 	readonly List<LineRenderer> debugTriangleLines = new List<LineRenderer>();
 	Transform debugTriangleLinesRoot;
 	readonly Dictionary<MirrorActor, MirrorActor[]> trianglePartners = new Dictionary<MirrorActor, MirrorActor[]>();
+	readonly HashSet<MirrorActor> mirrorsAtPosition = new HashSet<MirrorActor>();
+	readonly Dictionary<MirrorActor, int> triangleSide = new Dictionary<MirrorActor, int>();
 
 	public void Initialize(SimulationManager sim)
 	{
@@ -213,6 +213,8 @@ public class ChoreographyManager : MonoBehaviour
 	void RebuildTrianglePartners()
 	{
 		trianglePartners.Clear();
+		triangleSide.Clear();
+		mirrorsAtPosition.Clear();
 
 		List<MirrorActor> actors = GetActiveActors();
 		if (actors.Count < 3)
@@ -229,6 +231,9 @@ public class ChoreographyManager : MonoBehaviour
 			MirrorActor partner_b = others[UnityEngine.Random.Range(0, others.Count)];
 
 			trianglePartners[actor] = new MirrorActor[] { partner_a, partner_b };
+
+			if (DebugChoreography)
+				Debug.Log("[choreography] partners | " + actor.name + " -> " + partner_a.name + " + " + partner_b.name);
 		}
 	}
 
@@ -427,6 +432,15 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 			}
 		}
 
+		for (int i = 0; i < actors.Count; i++)
+		{
+			if (!IsMirrorAtTrianglePosition(actors[i]))
+			{
+				lastTriangleUnstableReason = "mirror_not_at_position:" + actors[i].name;
+				return false;
+			}
+		}
+
 		lastTriangleUnstableReason = "stable";
 		return true;
 	}
@@ -598,29 +612,34 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 	public bool IsMirrorAtTrianglePosition(MirrorActor actor)
 	{
 		if (actor == null || actor.IsBroken)
+		{
+			mirrorsAtPosition.Remove(actor);
 			return false;
+		}
 
 		if (actor.PlanarVelocity.magnitude > TriangleStableSpeedThreshold)
+		{
+			mirrorsAtPosition.Remove(actor);
 			return false;
+		}
 
-		EnsureTrianglePartners();
-		if (!trianglePartners.TryGetValue(actor, out MirrorActor[] partners) || partners == null || partners.Length < 2)
-			return false;
+		Vector3 target = GetTriangleTargetFor(actor);
+		Vector3 pos = actor.WorldPosition;
+		target.y = 0f;
+		pos.y = 0f;
 
-		MirrorActor partner_a = partners[0];
-		MirrorActor partner_b = partners[1];
-		if (partner_a == null || partner_b == null)
-			return false;
+		float distance_to_target = Vector3.Distance(pos, target);
+		bool was_stable = mirrorsAtPosition.Contains(actor);
+		float threshold = was_stable ? TriangleStableDistanceHysteresis : TriangleStableDistanceTolerance;
 
-		Vector3 pos = actor.WorldPosition; pos.y = 0f;
-		Vector3 a = partner_a.WorldPosition; a.y = 0f;
-		Vector3 b = partner_b.WorldPosition; b.y = 0f;
+		if (distance_to_target <= threshold)
+		{
+			mirrorsAtPosition.Add(actor);
+			return true;
+		}
 
-		float dist_a = Vector3.Distance(pos, a);
-		float dist_b = Vector3.Distance(pos, b);
-		float local_avg = (dist_a + dist_b) * 0.5f;
-
-		return local_avg <= TriangleStablePartnerDistanceTolerance;
+		mirrorsAtPosition.Remove(actor);
+		return false;
 	}
 
 	public MirrorActor[] GetTrianglePartnersFor(MirrorActor actor)
@@ -672,14 +691,89 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 		flat_pos.y = 0f;
 		float dist_to_anchor = Vector3.Distance(flat_pos, anchor);
 
-		Vector3 target;
-		if (dist_to_anchor > AnchorOuterLimit)
-			target = Vector3.Distance(target_positive, anchor) <= Vector3.Distance(target_negative, anchor) ? target_positive : target_negative;
+		int side;
+		if (triangleSide.TryGetValue(actor, out int cached_side))
+		{
+			side = cached_side;
+		}
 		else
-			target = signed_distance >= 0f ? target_positive : target_negative;
+		{
+			if (dist_to_anchor > AnchorOuterLimit)
+				side = Vector3.Distance(target_positive, anchor) <= Vector3.Distance(target_negative, anchor) ? 1 : -1;
+			else
+				side = signed_distance >= 0f ? 1 : -1;
+
+			triangleSide[actor] = side;
+		}
+
+		Vector3 target = side > 0 ? target_positive : target_negative;
 
 		target = PushOutOfPendulumZone(target, current_position);
+		target = ClampToStageBounds(target);
 		return ApplyAnchorCoupling(target);
+	}
+
+	static readonly Vector2[] stageBounds = new Vector2[]
+	{
+		new Vector2(-5.96f, 4.34f),   // haut gauche  (x, z)
+		new Vector2(6.03f, 4.28f),    // haut droite
+		new Vector2(7.37f, -6f),      // bas droite
+		new Vector2(-7.33f, -6f),     // bas gauche
+	};
+
+	Vector3 ClampToStageBounds(Vector3 target)
+	{
+		Vector2 point = new Vector2(target.x, target.z);
+
+		if (IsInsidePolygon(point, stageBounds))
+			return target;
+
+		Vector2 closest = ClosestPointOnPolygon(point, stageBounds);
+		target.x = closest.x;
+		target.z = closest.y;
+		return target;
+	}
+
+	static bool IsInsidePolygon(Vector2 point, Vector2[] polygon)
+	{
+		bool inside = false;
+		int count = polygon.Length;
+
+		for (int i = 0, j = count - 1; i < count; j = i++)
+		{
+			if ((polygon[i].y > point.y) != (polygon[j].y > point.y) &&
+				point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x)
+			{
+				inside = !inside;
+			}
+		}
+
+		return inside;
+	}
+
+	static Vector2 ClosestPointOnPolygon(Vector2 point, Vector2[] polygon)
+	{
+		float bestDist = float.MaxValue;
+		Vector2 bestPoint = point;
+		int count = polygon.Length;
+
+		for (int i = 0, j = count - 1; i < count; j = i++)
+		{
+			Vector2 a = polygon[j];
+			Vector2 b = polygon[i];
+			Vector2 ab = b - a;
+			float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / ab.sqrMagnitude);
+			Vector2 projected = a + ab * t;
+			float dist = (point - projected).sqrMagnitude;
+
+			if (dist < bestDist)
+			{
+				bestDist = dist;
+				bestPoint = projected;
+			}
+		}
+
+		return bestPoint;
 	}
 
 	Vector3 PushOutOfPendulumZone(Vector3 target, Vector3 current_position)
@@ -691,11 +785,13 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 			return target;
 
 		// La cible est dans la zone interdite — pousse vers le côté où se trouve le miroir
+		// Marge pour que le miroir se stabilise bien en dehors de la zone
+		float push_z = PendulumExclusionHalfWidth + TriangleStableCenterDistanceTolerance;
 		float mirror_z = current_position.z;
 		if (mirror_z >= 0f)
-			target.z = PendulumExclusionHalfWidth;
+			target.z = push_z;
 		else
-			target.z = -PendulumExclusionHalfWidth;
+			target.z = -push_z;
 
 		return target;
 	}
@@ -988,8 +1084,50 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 			" | max_speed=" + lastTriangleMaxSpeed.ToString("F3") +
 			" | stable_reason=" + lastTriangleUnstableReason +
 			" | active_pattern_timer=" + activePatternTimer.ToString("F2") +
-			" | active_pattern_duration=" + activePatternDuration.ToString("F2")
+			" | active_pattern_duration=" + activePatternDuration.ToString("F2") +
+				" | partners=" + BuildPartnersDebugString(actors)
 		);
+	}
+
+	string BuildPartnersDebugString(List<MirrorActor> actors)
+	{
+		System.Text.StringBuilder sb = new System.Text.StringBuilder();
+
+		for (int i = 0; i < actors.Count; i++)
+		{
+			MirrorActor actor = actors[i];
+			if (i > 0) sb.Append(" ");
+
+			string label = actor.name.Replace("NeuMirrorActor(Clone)", "M" + i);
+			bool stable = IsMirrorAtTrianglePosition(actor);
+			sb.Append(stable ? "[" : "(");
+			sb.Append(label);
+
+			if (trianglePartners.TryGetValue(actor, out MirrorActor[] partners) && partners != null)
+			{
+				sb.Append("->");
+				for (int p = 0; p < partners.Length; p++)
+				{
+					if (p > 0) sb.Append(",");
+					int partner_index = actors.IndexOf(partners[p]);
+					sb.Append("M" + partner_index);
+				}
+
+				if (!stable)
+				{
+					Vector3 pos = actor.WorldPosition; pos.y = 0f;
+					Vector3 tgt = GetTriangleTargetFor(actor); tgt.y = 0f;
+					float dist = Vector3.Distance(pos, tgt);
+					float spd = actor.PlanarVelocity.magnitude;
+					sb.Append(" dist=" + dist.ToString("F2") + "/tol=" + TriangleStableDistanceTolerance.ToString("F2"));
+					sb.Append(" spd=" + spd.ToString("F3") + "/max=" + TriangleStableSpeedThreshold.ToString("F3"));
+				}
+			}
+
+			sb.Append(stable ? "]" : ")");
+		}
+
+		return sb.ToString();
 	}
 
 	public void LogActorSnapshot()

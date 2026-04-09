@@ -86,9 +86,9 @@ MonoBehaviour:
   MirrorPivotX: {fileID: 3847452779503912560}
   IntactVisual: {fileID: 0}
   Mass: 1
-  AttractionStrength: 1.5
+  AttractionStrength: 5.66
   Damping: 0.98
-  RotationSpeed: 8
+  RotationSpeed: 10.46
   SteeringAcceleration: 8
   BrakingAcceleration: 10
   MaxGroundSpeed: 3.5
