@@ -896,6 +896,17 @@ public class MirrorActor : MonoBehaviour
 		Break(impact_point);
 	}
 
+	public void ForceBreak()
+	{
+		if (is_broken)
+			return;
+
+		last_break_impact_velocity = Vector3.zero;
+		last_break_impact_direction = Vector3.down;
+		last_break_impact_speed = 0f;
+		Break(WorldPosition);
+	}
+
 	void Break(Vector3 impact_point)
 	{
 		is_broken = true;

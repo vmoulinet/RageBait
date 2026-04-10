@@ -60,6 +60,26 @@ public class MirrorManager : MonoBehaviour
 		CacheSpawnPoints();
 	}
 
+	[Header("Debug")]
+	public bool EnableDebugBreakAll = true;
+	public KeyCode BreakAllKey = KeyCode.R;
+
+	void Update()
+	{
+		if (EnableDebugBreakAll && Input.GetKeyDown(BreakAllKey))
+			BreakAllMirrors();
+	}
+
+	public void BreakAllMirrors()
+	{
+		for (int i = ActiveMirrors.Count - 1; i >= 0; i--)
+		{
+			MirrorActor mirror = ActiveMirrors[i];
+			if (mirror != null && !mirror.IsBroken)
+				mirror.ForceBreak();
+		}
+	}
+
 	public void BootstrapMirrors()
 	{
 		if (MirrorPrefab == null)

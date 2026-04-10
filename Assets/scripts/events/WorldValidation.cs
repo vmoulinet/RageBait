@@ -24,6 +24,9 @@ public class WorldValidation : MonoBehaviour
 	public float AttractMaxSpeed = 10f;
 	public float AttractDamping = 3f;
 	public float AttractSpinTorque = 2f;
+	public float OrbitalForce = 8f;
+	public float NoiseStrength = 3f;
+	public float NoiseFrequency = 1.5f;
 
 	[Header("Repulsion")]
 	public float RepulsionForce = 8f;
@@ -47,8 +50,8 @@ public class WorldValidation : MonoBehaviour
 	Rigidbody[] cached_bodies;
 	bool[] cached_use_gravity;
 	float[] cached_damping;
-	int debris_layer = -1;
-	bool debris_collision_was_enabled = true;
+	MirrorDebris[] cached_debris;
+	int[] cached_orbital_sign; // +1 or -1
 
 	public Phase CurrentPhase => current_phase;
 	public bool IsActive => current_phase != Phase.Idle && current_phase != Phase.Done;
@@ -86,7 +89,6 @@ public class WorldValidation : MonoBehaviour
 
 		SaveState();
 		SetGravity(false);
-		DisableDebrisCollisions();
 		ApplyInitialSpin();
 
 		current_phase = Phase.Attract;
@@ -136,10 +138,7 @@ public class WorldValidation : MonoBehaviour
 		phase_timer = 0f;
 
 		if (next == Phase.Done)
-		{
 			RestoreState();
-			RestoreDebrisCollisions();
-		}
 	}
 
 	void ApplyInitialSpin()
@@ -159,26 +158,46 @@ public class WorldValidation : MonoBehaviour
 	{
 		Vector3 center = AttractCenter != null ? AttractCenter.position : transform.position;
 
-		for (int i = 0; i < cached_bodies.Length; i++)
+		for (int di = 0; di < cached_debris.Length; di++)
 		{
-			Rigidbody body = cached_bodies[i];
-			if (body == null)
+			MirrorDebris debris = cached_debris[di];
+			if (debris == null)
 				continue;
 
-			body.linearDamping = AttractDamping;
+			int sign = cached_orbital_sign[di];
 
-			Vector3 to_center = center - body.worldCenterOfMass;
-			float distance = to_center.magnitude;
-
-			if (distance > 0.01f)
+			Rigidbody[] bodies = debris.GetComponentsInChildren<Rigidbody>();
+			for (int bi = 0; bi < bodies.Length; bi++)
 			{
-				body.AddForce(to_center.normalized * AttractForce, ForceMode.Acceleration);
+				Rigidbody body = bodies[bi];
+				if (body == null)
+					continue;
 
-				if (body.linearVelocity.magnitude > AttractMaxSpeed)
-					body.linearVelocity = body.linearVelocity.normalized * AttractMaxSpeed;
+				body.linearDamping = AttractDamping;
+
+				Vector3 to_center = center - body.worldCenterOfMass;
+				float distance = to_center.magnitude;
+
+				if (distance > 0.01f)
+				{
+					body.AddForce(to_center.normalized * AttractForce, ForceMode.Acceleration);
+
+					Vector3 tangent = new Vector3(-to_center.y, to_center.x, 0f).normalized;
+
+					body.AddForce(tangent * (OrbitalForce * sign), ForceMode.Acceleration);
+
+					if (body.linearVelocity.magnitude > AttractMaxSpeed)
+						body.linearVelocity = body.linearVelocity.normalized * AttractMaxSpeed;
+				}
+
+				body.AddTorque(Random.insideUnitSphere * AttractSpinTorque, ForceMode.Acceleration);
+
+				float seed = Mathf.Abs(body.GetInstanceID()) * 0.00137f;
+				float nx = Mathf.PerlinNoise(seed, Time.time * NoiseFrequency) - 0.5f;
+				float ny = Mathf.PerlinNoise(seed + 31.7f, Time.time * NoiseFrequency) - 0.5f;
+				float nz = Mathf.PerlinNoise(seed + 67.3f, Time.time * NoiseFrequency) - 0.5f;
+				body.AddForce(new Vector3(nx, ny, nz) * NoiseStrength, ForceMode.Acceleration);
 			}
-
-			body.AddTorque(Random.insideUnitSphere * AttractSpinTorque, ForceMode.Acceleration);
 		}
 
 		ApplyRepulsion();
@@ -186,19 +205,22 @@ public class WorldValidation : MonoBehaviour
 
 	void ApplyRepulsion()
 	{
-		for (int i = 0; i < cached_bodies.Length; i++)
+		if (cached_debris == null || cached_debris.Length < 2)
+			return;
+
+		for (int i = 0; i < cached_debris.Length; i++)
 		{
-			Rigidbody a = cached_bodies[i];
+			MirrorDebris a = cached_debris[i];
 			if (a == null)
 				continue;
 
-			for (int j = i + 1; j < cached_bodies.Length; j++)
+			for (int j = i + 1; j < cached_debris.Length; j++)
 			{
-				Rigidbody b = cached_bodies[j];
+				MirrorDebris b = cached_debris[j];
 				if (b == null)
 					continue;
 
-				Vector3 delta = a.worldCenterOfMass - b.worldCenterOfMass;
+				Vector3 delta = a.transform.position - b.transform.position;
 				float distance = delta.magnitude;
 
 				if (distance < 0.001f || distance > RepulsionRadius)
@@ -207,9 +229,19 @@ public class WorldValidation : MonoBehaviour
 				float strength = RepulsionForce * (1f - distance / RepulsionRadius);
 				Vector3 push = delta.normalized * strength;
 
-				a.AddForce(push, ForceMode.Acceleration);
-				b.AddForce(-push, ForceMode.Acceleration);
+				ApplyForceToDebris(a, push);
+				ApplyForceToDebris(b, -push);
 			}
+		}
+	}
+
+	void ApplyForceToDebris(MirrorDebris debris, Vector3 force)
+	{
+		Rigidbody[] bodies = debris.GetComponentsInChildren<Rigidbody>();
+		for (int i = 0; i < bodies.Length; i++)
+		{
+			if (bodies[i] != null)
+				bodies[i].AddForce(force, ForceMode.Acceleration);
 		}
 	}
 
@@ -240,6 +272,11 @@ public class WorldValidation : MonoBehaviour
 		}
 
 		cached_bodies = DebrisRoot.GetComponentsInChildren<Rigidbody>(true);
+		cached_debris = DebrisRoot.GetComponentsInChildren<MirrorDebris>(true);
+
+		cached_orbital_sign = new int[cached_debris.Length];
+		for (int i = 0; i < cached_debris.Length; i++)
+			cached_orbital_sign[i] = Random.value < 0.5f ? -1 : 1;
 	}
 
 	void SaveState()
@@ -286,33 +323,5 @@ public class WorldValidation : MonoBehaviour
 			if (cached_bodies[i] != null)
 				cached_bodies[i].useGravity = enabled;
 		}
-	}
-
-	void DisableDebrisCollisions()
-	{
-		debris_layer = LayerMask.NameToLayer("Debris");
-		if (debris_layer < 0)
-		{
-			if (DebugLog)
-				Debug.LogWarning("[world_validation] layer 'Debris' not found, skipping collision disable");
-			return;
-		}
-
-		debris_collision_was_enabled = !Physics.GetIgnoreLayerCollision(debris_layer, debris_layer);
-		Physics.IgnoreLayerCollision(debris_layer, debris_layer, true);
-
-		if (DebugLog)
-			Debug.Log("[world_validation] debris-debris collisions disabled");
-	}
-
-	void RestoreDebrisCollisions()
-	{
-		if (debris_layer < 0)
-			return;
-
-		Physics.IgnoreLayerCollision(debris_layer, debris_layer, !debris_collision_was_enabled);
-
-		if (DebugLog)
-			Debug.Log("[world_validation] debris-debris collisions restored");
 	}
 }
