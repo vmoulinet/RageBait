@@ -266,6 +266,7 @@ public class MirrorManager : MonoBehaviour
 	{
 		int active_count = 0;
 		MirrorDebris oldest_active = null;
+		float oldest_time = float.MaxValue;
 
 		for (int i = 0; i < debris_pool.Count; i++)
 		{
@@ -273,8 +274,11 @@ public class MirrorManager : MonoBehaviour
 			if (d != null && d.gameObject.activeSelf && !d.IsSinking)
 			{
 				active_count++;
-				if (oldest_active == null)
+				if (d.ActivateTime < oldest_time)
+				{
+					oldest_time = d.ActivateTime;
 					oldest_active = d;
+				}
 			}
 		}
 

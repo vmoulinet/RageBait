@@ -83,8 +83,11 @@ public class MirrorActor : MonoBehaviour
 	Collider[] own_colliders;
 	float speed_boost_multiplier = 1f;
 	float speed_boost_timer = 0f;
+	float speed_boost_initial_multiplier = 1f;
 	float speed_boost_duration = 0f;
 	bool is_hopping = false;
+	RigidbodyConstraints pre_hop_constraints;
+	Quaternion hop_frozen_rotation;
 
 	public bool IsBroken
 	{
@@ -245,11 +248,20 @@ public class MirrorActor : MonoBehaviour
 		if (speed_boost_timer > 0f)
 		{
 			speed_boost_timer -= Time.fixedDeltaTime;
-			speed_boost_multiplier = 1f + (speed_boost_multiplier - 1f) * Mathf.Clamp01(speed_boost_timer / speed_boost_duration);
+			speed_boost_multiplier = 1f + (speed_boost_initial_multiplier - 1f) * Mathf.Clamp01(speed_boost_timer / speed_boost_duration);
 		}
 		else
 		{
 			speed_boost_multiplier = 1f;
+		}
+
+		if (is_hopping)
+		{
+			rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+			rb.angularVelocity = Vector3.zero;
+			rb.rotation = hop_frozen_rotation;
+			ApplyGrounding();
+			return;
 		}
 
 		Vector3 desired_planar_velocity = facing_override_active ? Vector3.zero : ComputeDesiredPlanarVelocity();
@@ -510,7 +522,11 @@ public class MirrorActor : MonoBehaviour
 		{
 			rb.AddForce(Vector3.down * BreakBoostHopGravity, ForceMode.Acceleration);
 			if (rb.linearVelocity.y <= 0f)
+			{
 				is_hopping = false;
+				rb.constraints = pre_hop_constraints;
+				speed_boost_multiplier = speed_boost_initial_multiplier;
+			}
 		}
 		else if (UseGravity)
 		{
@@ -651,9 +667,16 @@ public class MirrorActor : MonoBehaviour
 		}
 		else
 		{
-			float speed_ratio = Mathf.Clamp01(PlanarVelocity.magnitude / Mathf.Max(0.01f, MaxGroundSpeed));
-			float velocity_tilt = PanelXAngle + speed_ratio * PanelXVelocityTilt;
-			panel_x_target = velocity_tilt;
+			if (is_hopping)
+			{
+				panel_x_target = 0f;
+			}
+			else
+			{
+				float speed_ratio = Mathf.Clamp01(PlanarVelocity.magnitude / Mathf.Max(0.01f, MaxGroundSpeed * speed_boost_multiplier));
+				float velocity_tilt = PanelXAngle + speed_ratio * PanelXVelocityTilt;
+				panel_x_target = velocity_tilt;
+			}
 			panel_x_current = Mathf.MoveTowards(panel_x_current, panel_x_target, PanelXSpeed * Time.deltaTime);
 		}
 
@@ -932,12 +955,19 @@ public class MirrorActor : MonoBehaviour
 
 	public void ApplySpeedBoost(float multiplier, float duration)
 	{
-		speed_boost_multiplier = multiplier;
+		speed_boost_initial_multiplier = multiplier;
+		speed_boost_multiplier = 1f;
 		speed_boost_duration = duration;
 		speed_boost_timer = duration;
 
-		if (rb != null)
+		if (rb != null && !is_hopping)
 		{
+			pre_hop_constraints = rb.constraints;
+			rb.constraints = RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ | RigidbodyConstraints.FreezeRotation;
+			rb.linearVelocity = Vector3.zero;
+			rb.angularVelocity = Vector3.zero;
+			smoothed_desired_planar_velocity = Vector3.zero;
+			hop_frozen_rotation = rb.rotation;
 			rb.AddForce(Vector3.up * BreakBoostHopForce, ForceMode.VelocityChange);
 			is_hopping = true;
 		}

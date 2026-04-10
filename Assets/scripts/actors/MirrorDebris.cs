@@ -36,8 +36,10 @@ public class MirrorDebris : MonoBehaviour
 	float current_loop_amount = 0f;
 	bool is_sinking = false;
 	bool snapshot_taken = false;
+	float activate_time = 0f;
 
 	public bool IsSinking => is_sinking;
+	public float ActivateTime => activate_time;
 
 	void Awake()
 	{
@@ -72,6 +74,7 @@ public class MirrorDebris : MonoBehaviour
 		is_sinking = false;
 		last_ground_impact_time = -999f;
 		current_loop_amount = 0f;
+		activate_time = Time.time;
 
 		for (int i = 0; i < cached_bodies.Length; i++)
 		{
@@ -212,6 +215,8 @@ public class MirrorDebris : MonoBehaviour
 	{
 		if (actor == null)
 			return;
+
+		activate_time = Time.time;
 
 		if (actor.MirrorManager != null)
 			sound_manager = actor.MirrorManager.SoundManager;
