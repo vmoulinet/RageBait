@@ -15,7 +15,7 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/glass.bank
   Name: glass
   StudioPath: bank:/glass
-  lastModified: 639097057374713484
+  lastModified: 639116785692890804
   FileSizes: []
   Exists: 1
 --- !u!114 &-5270939757522057236
@@ -33,7 +33,7 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639096919779834384
+  lastModified: 639116785692766067
   FileSizes: []
   Exists: 1
 --- !u!114 &-4546275768137045820
@@ -174,7 +174,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: 1021524609466712441}
   cacheVersion: 131858
-  cacheTime: 639097057375305346
+  cacheTime: 639116785693146237
   SerializableEventsDict:
   - key: event:/glass_break
     index: 0
@@ -231,7 +231,7 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639097057374300797
+  lastModified: 639116785692766067
   FileSizes:
   - Name: 
     Value: 1254
@@ -251,7 +251,7 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/pendule.bank
   Name: pendule
   StudioPath: bank:/pendule
-  lastModified: 639097057375305346
+  lastModified: 639116785693146237
   FileSizes: []
   Exists: 1
 --- !u!114 &4537515143738703551
@@ -269,7 +269,7 @@ MonoBehaviour:
   Path: Assets/BANKS/Desktop/Daddy.bank
   Name: Daddy
   StudioPath: bank:/Daddy
-  lastModified: 639097057373851903
+  lastModified: 639116785692756095
   FileSizes: []
   Exists: 1
 --- !u!114 &4874550985205569271
