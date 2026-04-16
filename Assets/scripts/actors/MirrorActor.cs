@@ -20,6 +20,7 @@ public class MirrorActor : MonoBehaviour
 	public float SteeringAcceleration = 8f;
 	public float BrakingAcceleration = 10f;
 	public float MaxGroundSpeed = 3.5f;
+	public float SpeedRandomRange = 0.3f;
 	public float WallSlideDamping = 0.97f;
 	public float DirectionResponsiveness = 4f;
 	public float VelocityResponsiveness = 3f;
@@ -81,6 +82,7 @@ public class MirrorActor : MonoBehaviour
 	Vector3 smoothed_facing_direction = Vector3.forward;
 	Collider[] debris_push_hits = new Collider[12];
 	Collider[] own_colliders;
+	float base_max_ground_speed;
 	float speed_boost_multiplier = 1f;
 	float speed_boost_timer = 0f;
 	float speed_boost_initial_multiplier = 1f;
@@ -191,6 +193,7 @@ public class MirrorActor : MonoBehaviour
 
 	void Awake()
 	{
+		base_max_ground_speed = MaxGroundSpeed;
 		rb = GetComponent<Rigidbody>();
 		if (rb == null)
 		{
@@ -264,7 +267,7 @@ public class MirrorActor : MonoBehaviour
 			return;
 		}
 
-		Vector3 desired_planar_velocity = facing_override_active ? Vector3.zero : ComputeDesiredPlanarVelocity();
+		Vector3 desired_planar_velocity = ComputeDesiredPlanarVelocity();
 		desired_planar_velocity = ApplyObstacleAvoidance(desired_planar_velocity);
 
 		smoothed_desired_planar_velocity = Vector3.Lerp(
@@ -335,10 +338,21 @@ public class MirrorActor : MonoBehaviour
 
 	Vector3 ComputeCircleVelocity(ChoreographyManager choreography)
 	{
-		if (AtCircleTarget(choreography.ToleranceRadius))
+		if (AtCircleTarget(0.05f))
 			return Vector3.zero;
 
-		return BuildDesiredVelocity(CircleTarget, AttractionStrength, true, choreography);
+		Vector3 to_target = CircleTarget - WorldPosition;
+		to_target.y = 0f;
+
+		if (to_target.sqrMagnitude <= 0.0001f)
+			return Vector3.zero;
+
+		float distance = to_target.magnitude;
+		float speed = Mathf.Max(MaxGroundSpeed * 0.3f, Mathf.Min(MaxGroundSpeed, distance * AttractionStrength));
+		Vector3 desired = to_target.normalized * speed;
+		desired += NoiseVelocity();
+		desired += ComputeAnchorIntent(choreography);
+		return ClampDesiredVelocity(desired);
 	}
 
 	Vector3 ComputeChaosVelocity(ChoreographyManager choreography)
@@ -754,6 +768,8 @@ public class MirrorActor : MonoBehaviour
 			transform.rotation = spawn_rotation;
 			transform.position = spawn_position;
 		}
+
+		MaxGroundSpeed = base_max_ground_speed * Random.Range(1f - SpeedRandomRange, 1f + SpeedRandomRange);
 
 		last_desired_planar_velocity = Vector3.zero;
 		smoothed_desired_planar_velocity = Vector3.zero;

@@ -70,6 +70,10 @@ public class ChoreographyManager : MonoBehaviour
 	public float CircleMoveTimeout = 6f;
 	public float CircleOrientTimeout = 3f;
 	public float CircleOrientationTolerance = 8f;
+	public float CircleFaceAnchorDelay = 1f;
+	public float CircleHoldFacingDuration = 2f;
+	public float CircleOrbitSpeed = 60f;
+	public float CircleFaceOutwardDuration = 1f;
 
 	[Header("Chaos")]
 	public float ChaosStrength = 1.5f;
@@ -87,8 +91,14 @@ public class ChoreographyManager : MonoBehaviour
 	public enum CirclePhase
 	{
 		Move,
-		Orient,
-		Hold
+		FaceAnchor,
+		HoldFacing,
+		QuarterOrbit,
+		SplitInner,
+		DualOrbit,
+		Regroup,
+		FaceOutward,
+		Done
 	}
 
 	[HideInInspector] public CirclePhase CurrentCirclePhase = CirclePhase.Move;
@@ -102,6 +112,13 @@ public class ChoreographyManager : MonoBehaviour
 	float circleHoldTimer;
 	float debugLogTimer;
 	float circlePhaseTimer;
+
+	// Circle orbit tracking
+	readonly Dictionary<MirrorActor, float> circleActorAngles = new Dictionary<MirrorActor, float>();
+	readonly List<MirrorActor> circleInnerActors = new List<MirrorActor>();
+	readonly List<MirrorActor> circleOuterActors = new List<MirrorActor>();
+	float circleOrbitAccumulated;
+	float circleQuarterOrbitAccumulated;
 	float triangleStableTimer;
 	float activePatternTimer;
 	float activePatternDuration;
@@ -132,11 +149,31 @@ public class ChoreographyManager : MonoBehaviour
 		if (MirrorManager == null)
 			return;
 
+		HandleDebugStateKeys();
 		UpdateAutoCycle();
 
 		UpdateTriangleDebugLines();
 
 		UpdateDebugLogging();
+	}
+
+	void HandleDebugStateKeys()
+	{
+		ChoreographyState? requested = null;
+
+		if (Input.GetKeyDown(KeyCode.Alpha0)) requested = ChoreographyState.Triangle;
+		if (Input.GetKeyDown(KeyCode.Alpha1)) requested = ChoreographyState.Spiral;
+		if (Input.GetKeyDown(KeyCode.Alpha2)) requested = ChoreographyState.Circle;
+		if (Input.GetKeyDown(KeyCode.Alpha3)) requested = ChoreographyState.Chaos;
+		if (Input.GetKeyDown(KeyCode.Alpha4)) requested = ChoreographyState.Scatter;
+		if (Input.GetKeyDown(KeyCode.Alpha5)) requested = ChoreographyState.Line;
+		if (Input.GetKeyDown(KeyCode.Alpha6)) requested = ChoreographyState.Pause;
+
+		if (requested.HasValue)
+		{
+			Debug.Log("[choreography] key override | " + CurrentState + " -> " + requested.Value);
+			SetState(requested.Value);
+		}
 	}
 	void UpdateTriangleDebugLines()
 	{
@@ -936,71 +973,281 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 		circleHoldTimer = 0f;
 		circlePhaseTimer = 0f;
 		activePatternTimer = 0f;
+		circleOrbitAccumulated = 0f;
+		circleQuarterOrbitAccumulated = 0f;
+		circleActorAngles.Clear();
+		circleInnerActors.Clear();
+		circleOuterActors.Clear();
 
 		ComputeCenter();
 		ComputeCircleTargets();
+
+		// Cache initial angles for each actor
+		Vector3 anchor = GetResolvedAnchorPoint();
+		List<MirrorActor> actors = GetActiveActors();
+		for (int i = 0; i < actors.Count; i++)
+		{
+			Vector3 diff = actors[i].CircleTarget - anchor;
+			circleActorAngles[actors[i]] = Mathf.Atan2(diff.z, diff.x) * Mathf.Rad2Deg;
+		}
+
 		if (DebugChoreography)
-			Debug.Log("[choreography] start circle | center=" + Center.ToString("F2") + " | anchor=" + GetResolvedAnchorPoint().ToString("F2"));
+			Debug.Log("[choreography] start circle | center=" + Center.ToString("F2") + " | anchor=" + anchor.ToString("F2"));
 	}
 
 	void StopCircle()
 	{
+		List<MirrorActor> actors = GetActiveActors();
+		for (int i = 0; i < actors.Count; i++)
+			actors[i].ClearFacingOverride();
+
+		circleActorAngles.Clear();
+		circleInnerActors.Clear();
+		circleOuterActors.Clear();
+
 		ReturnToTriangleFromPattern();
 		if (DebugChoreography)
 			Debug.Log("[choreography] stop circle -> triangle");
+	}
+
+	void SetCirclePhase(CirclePhase phase)
+	{
+		CurrentCirclePhase = phase;
+		circlePhaseTimer = 0f;
+		if (DebugChoreography)
+			Debug.Log("[choreography] circle phase -> " + phase);
 	}
 
 	void UpdateCircleState()
 	{
 		circlePhaseTimer += Time.deltaTime;
 
-		if (CurrentCirclePhase == CirclePhase.Move)
+		switch (CurrentCirclePhase)
 		{
-			if (AllAtTargets())
-			{
-				CurrentCirclePhase = CirclePhase.Orient;
-				circlePhaseTimer = 0f;
-
-				if (DebugChoreography)
-					Debug.Log("[choreography] circle phase move -> orient");
-			}
-			else if (circlePhaseTimer >= CircleMoveTimeout)
-			{
-				CurrentCirclePhase = CirclePhase.Orient;
-				circlePhaseTimer = 0f;
-
-				if (DebugChoreography)
-					Debug.Log("[choreography] circle move timeout -> orient");
-			}
-		}
-		else if (CurrentCirclePhase == CirclePhase.Orient)
-		{
-			if (AllOriented())
-			{
-				CurrentCirclePhase = CirclePhase.Hold;
-				circlePhaseTimer = 0f;
-				circleHoldTimer = 0f;
-
-				if (DebugChoreography)
-					Debug.Log("[choreography] circle phase orient -> hold");
-			}
-			else if (circlePhaseTimer >= CircleOrientTimeout)
-			{
-				CurrentCirclePhase = CirclePhase.Hold;
-				circlePhaseTimer = 0f;
-				circleHoldTimer = 0f;
-
-				if (DebugChoreography)
-					Debug.Log("[choreography] circle orient timeout -> hold");
-			}
-		}
-		else if (CurrentCirclePhase == CirclePhase.Hold)
-		{
-			circleHoldTimer += Time.deltaTime;
-
-			if (circleHoldTimer >= CircleHoldDuration)
+			case CirclePhase.Move:
+				UpdateCircleMove();
+				break;
+			case CirclePhase.FaceAnchor:
+				UpdateCircleFaceAnchor();
+				break;
+			case CirclePhase.HoldFacing:
+				UpdateCircleHoldFacing();
+				break;
+			case CirclePhase.QuarterOrbit:
+				UpdateCircleQuarterOrbit();
+				break;
+			case CirclePhase.SplitInner:
+				UpdateCircleSplitInner();
+				break;
+			case CirclePhase.DualOrbit:
+				UpdateCircleDualOrbit();
+				break;
+			case CirclePhase.Regroup:
+				UpdateCircleRegroup();
+				break;
+			case CirclePhase.FaceOutward:
+				UpdateCircleFaceOutward();
+				break;
+			case CirclePhase.Done:
 				StopCircle();
+				break;
 		}
+	}
+
+	void UpdateCircleMove()
+	{
+		if (AllAtTargets() || circlePhaseTimer >= CircleMoveTimeout)
+		{
+			// All arrived — start facing anchor after delay
+			List<MirrorActor> actors = GetActiveActors();
+			Vector3 anchor = GetResolvedAnchorPoint();
+			for (int i = 0; i < actors.Count; i++)
+			{
+				Vector3 toAnchor = anchor - actors[i].WorldPosition;
+				toAnchor.y = 0f;
+				if (toAnchor.sqrMagnitude > 0.0001f)
+					actors[i].SetFacingOverride(toAnchor.normalized);
+			}
+			SetCirclePhase(CirclePhase.FaceAnchor);
+		}
+	}
+
+	void UpdateCircleFaceAnchor()
+	{
+		if (circlePhaseTimer >= CircleFaceAnchorDelay)
+			SetCirclePhase(CirclePhase.HoldFacing);
+	}
+
+	void UpdateCircleHoldFacing()
+	{
+		if (circlePhaseTimer >= CircleHoldFacingDuration)
+		{
+			// Turn 90° right and start quarter orbit CCW
+			List<MirrorActor> actors = GetActiveActors();
+			for (int i = 0; i < actors.Count; i++)
+			{
+				Vector3 currentFacing = actors[i].WorldRotation * Vector3.forward;
+				currentFacing.y = 0f;
+				if (currentFacing.sqrMagnitude > 0.0001f)
+				{
+					Vector3 rightFacing = Quaternion.AngleAxis(90f, Vector3.up) * currentFacing.normalized;
+					actors[i].SetFacingOverride(rightFacing);
+				}
+			}
+			circleQuarterOrbitAccumulated = 0f;
+			SetCirclePhase(CirclePhase.QuarterOrbit);
+		}
+	}
+
+	void UpdateCircleQuarterOrbit()
+	{
+		float step = CircleOrbitSpeed * Time.deltaTime;
+		circleQuarterOrbitAccumulated += step;
+
+		Vector3 anchor = GetResolvedAnchorPoint();
+		List<MirrorActor> actors = GetActiveActors();
+
+		// Orbit CCW = positive angle
+		for (int i = 0; i < actors.Count; i++)
+		{
+			if (!circleActorAngles.ContainsKey(actors[i]))
+				continue;
+
+			circleActorAngles[actors[i]] += step;
+			float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
+			actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
+
+			// Keep facing tangent (90° right of radial toward anchor = CCW tangent)
+			Vector3 radial = (actors[i].CircleTarget - anchor).normalized;
+			Vector3 tangent = new Vector3(-radial.z, 0f, radial.x);
+			actors[i].SetFacingOverride(-tangent);
+		}
+
+		if (circleQuarterOrbitAccumulated >= 90f)
+		{
+			// Split: every other actor goes inner
+			circleInnerActors.Clear();
+			circleOuterActors.Clear();
+
+			for (int i = 0; i < actors.Count; i++)
+			{
+				if (i % 2 == 1)
+					circleInnerActors.Add(actors[i]);
+				else
+					circleOuterActors.Add(actors[i]);
+			}
+
+			// Set inner actors targets to half radius
+			for (int i = 0; i < circleInnerActors.Count; i++)
+			{
+				if (!circleActorAngles.ContainsKey(circleInnerActors[i]))
+					continue;
+
+				float angle = circleActorAngles[circleInnerActors[i]] * Mathf.Deg2Rad;
+				circleInnerActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (CircleRadius * 0.5f);
+			}
+
+			SetCirclePhase(CirclePhase.SplitInner);
+		}
+	}
+
+	void UpdateCircleSplitInner()
+	{
+		// Wait for inner actors to reach their closer targets
+		bool allInnerArrived = true;
+		for (int i = 0; i < circleInnerActors.Count; i++)
+		{
+			if (!circleInnerActors[i].AtCircleTarget(0.15f))
+			{
+				allInnerArrived = false;
+				break;
+			}
+		}
+
+		if (allInnerArrived || circlePhaseTimer >= CircleMoveTimeout)
+		{
+			circleOrbitAccumulated = 0f;
+			SetCirclePhase(CirclePhase.DualOrbit);
+		}
+	}
+
+	void UpdateCircleDualOrbit()
+	{
+		float step = CircleOrbitSpeed * Time.deltaTime;
+		circleOrbitAccumulated += step;
+
+		Vector3 anchor = GetResolvedAnchorPoint();
+
+		// Inner actors: CCW (positive angle)
+		for (int i = 0; i < circleInnerActors.Count; i++)
+		{
+			if (!circleActorAngles.ContainsKey(circleInnerActors[i]))
+				continue;
+
+			circleActorAngles[circleInnerActors[i]] += step;
+			float angle = circleActorAngles[circleInnerActors[i]] * Mathf.Deg2Rad;
+			float radius = CircleRadius * 0.5f;
+			circleInnerActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+
+			Vector3 radial = (circleInnerActors[i].CircleTarget - anchor).normalized;
+			Vector3 tangent = new Vector3(-radial.z, 0f, radial.x);
+			circleInnerActors[i].SetFacingOverride(-tangent);
+		}
+
+		// Outer actors: CW (negative angle)
+		for (int i = 0; i < circleOuterActors.Count; i++)
+		{
+			if (!circleActorAngles.ContainsKey(circleOuterActors[i]))
+				continue;
+
+			circleActorAngles[circleOuterActors[i]] -= step;
+			float angle = circleActorAngles[circleOuterActors[i]] * Mathf.Deg2Rad;
+			circleOuterActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
+
+			Vector3 radial = (circleOuterActors[i].CircleTarget - anchor).normalized;
+			Vector3 tangent = new Vector3(-radial.z, 0f, radial.x);
+			circleOuterActors[i].SetFacingOverride(tangent);
+		}
+
+		if (circleOrbitAccumulated >= 360f)
+		{
+			// Regroup: all actors back to outer circle
+			List<MirrorActor> actors = GetActiveActors();
+			for (int i = 0; i < actors.Count; i++)
+			{
+				if (!circleActorAngles.ContainsKey(actors[i]))
+					continue;
+
+				float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
+				actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
+			}
+
+			SetCirclePhase(CirclePhase.Regroup);
+		}
+	}
+
+	void UpdateCircleRegroup()
+	{
+		if (AllAtTargets() || circlePhaseTimer >= CircleMoveTimeout)
+		{
+			// Face outward (away from anchor)
+			Vector3 anchor = GetResolvedAnchorPoint();
+			List<MirrorActor> actors = GetActiveActors();
+			for (int i = 0; i < actors.Count; i++)
+			{
+				Vector3 away = actors[i].WorldPosition - anchor;
+				away.y = 0f;
+				if (away.sqrMagnitude > 0.0001f)
+					actors[i].SetFacingOverride(away.normalized);
+			}
+			SetCirclePhase(CirclePhase.FaceOutward);
+		}
+	}
+
+	void UpdateCircleFaceOutward()
+	{
+		if (circlePhaseTimer >= CircleFaceOutwardDuration)
+			SetCirclePhase(CirclePhase.Done);
 	}
 
 	void ComputeCenter()
@@ -1029,42 +1276,66 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 			return;
 
 		Vector3 anchorPoint = GetResolvedAnchorPoint();
-		List<Vector3> slots = new List<Vector3>();
+		int count = actors.Count;
+		Vector3[] slots = new Vector3[count];
 
-		for (int i = 0; i < actors.Count; i++)
+		for (int i = 0; i < count; i++)
 		{
-			float angle = Mathf.PI * 2f * i / actors.Count;
-			slots.Add(anchorPoint + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius);
+			float angle = Mathf.PI * 2f * i / count;
+			slots[i] = anchorPoint + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
 		}
 
-		for (int i = 0; i < actors.Count; i++)
+		// Sort actors by their angle relative to anchor so each gets
+		// the geometrically closest slot without conflicts.
+		List<int> actorIndices = new List<int>(count);
+		for (int i = 0; i < count; i++)
+			actorIndices.Add(i);
+
+		actorIndices.Sort((a, b) =>
 		{
-			MirrorActor actor = actors[i];
+			Vector3 da = actors[a].WorldPosition - anchorPoint;
+			Vector3 db = actors[b].WorldPosition - anchorPoint;
+			float angleA = Mathf.Atan2(da.z, da.x);
+			float angleB = Mathf.Atan2(db.z, db.x);
+			return angleA.CompareTo(angleB);
+		});
 
-			Vector3 best = slots[0];
-			float bestDistance = Vector3.Distance(actor.WorldPosition, best);
+		// Find the rotation offset that minimizes total distance.
+		float bestTotalDist = float.MaxValue;
+		int bestOffset = 0;
 
-			for (int j = 0; j < slots.Count; j++)
+		for (int offset = 0; offset < count; offset++)
+		{
+			float totalDist = 0f;
+			for (int i = 0; i < count; i++)
 			{
-				float distance = Vector3.Distance(actor.WorldPosition, slots[j]);
-				if (distance < bestDistance)
-				{
-					bestDistance = distance;
-					best = slots[j];
-				}
+				int slotIndex = (i + offset) % count;
+				Vector3 diff = actors[actorIndices[i]].WorldPosition - slots[slotIndex];
+				diff.y = 0f;
+				totalDist += diff.sqrMagnitude;
 			}
+			if (totalDist < bestTotalDist)
+			{
+				bestTotalDist = totalDist;
+				bestOffset = offset;
+			}
+		}
 
-			actor.CircleTarget = best;
+		for (int i = 0; i < count; i++)
+		{
+			int slotIndex = (i + bestOffset) % count;
+			MirrorActor actor = actors[actorIndices[i]];
+			actor.CircleTarget = slots[slotIndex];
+
 			if (DebugCircleTargets)
 			{
 				Debug.Log(
 					"[choreography] circle target | actor=" + actor.name +
 					" | pos=" + actor.WorldPosition.ToString("F2") +
-					" | target=" + best.ToString("F2") +
+					" | target=" + slots[slotIndex].ToString("F2") +
 					" | anchor=" + anchorPoint.ToString("F2")
 				);
 			}
-			slots.Remove(best);
 		}
 	}
 

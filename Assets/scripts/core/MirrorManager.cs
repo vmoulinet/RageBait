@@ -199,8 +199,6 @@ public class MirrorManager : MonoBehaviour
 		ApplyBreakBoostToAll(mirror);
 		StartCoroutine(RespawnMirrorRoutine(mirror));
 
-		if (WordManager != null)
-			WordManager.OnMirrorBroken(mirror);
 
 		if (ChoreographyManager != null)
 			ChoreographyManager.RefreshTargets();
