@@ -1,8 +1,0 @@
-[12:38:07.165] Monitor démarré
-[12:38:07.167] OSC server sur port 8000
-[12:38:07.179] Serial connecté sur COM9
-[12:38:07.441] Pong reçu du contrôleur
-[SERIAL] LED: flash vert (heartbeat) — wifi:OK serial:OK
-[SERIAL] LED: flash vert (heartbeat) — wifi:OK serial:OK
-[SERIAL] LED: flash vert (heartbeat) — wifi:OK serial:OK
-[12:43:25.617] STOMP  63.64 kg

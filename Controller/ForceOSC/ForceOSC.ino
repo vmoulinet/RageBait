@@ -38,14 +38,10 @@
 #include <OSCMessage.h>
 #include <Adafruit_NeoPixel.h>
 
-// ─── LED externe ────────────────────────────────────────────────────────────
-#define LED_PIN   13
+// ─── LED ─────────────────────────────────────────────────────────────────────
+#define LED_PIN   5
 #define LED_COUNT 1
 Adafruit_NeoPixel led(LED_COUNT, LED_PIN, NEO_RGB + NEO_KHZ800);
-
-// ─── LED onboard (NeoPixel GPIO33) — indicateur power ──────────────────────
-#define ONBOARD_NEO_PIN 33
-Adafruit_NeoPixel onboardLed(1, ONBOARD_NEO_PIN, NEO_GRB + NEO_KHZ800);
 
 const uint32_t COL_OFF    = 0x000000;
 const uint32_t COL_WHITE  = 0xFFFFFF;
@@ -65,8 +61,6 @@ void ledFlash(uint32_t color, unsigned long durationMs) {
   flashColor  = color;
   led.setPixelColor(0, color);
   led.show();
-  onboardLed.setPixelColor(0, color);
-  onboardLed.show();
 }
 
 // Appeler chaque loop — gère la fin du flash
@@ -75,8 +69,6 @@ void ledUpdate() {
     flashActive = false;
     led.setPixelColor(0, COL_OFF);
     led.show();
-    onboardLed.setPixelColor(0, COL_OFF);
-    onboardLed.show();
   }
 }
 
@@ -85,8 +77,6 @@ void ledSet(uint32_t color) {
   flashActive = false;
   led.setPixelColor(0, color);
   led.show();
-  onboardLed.setPixelColor(0, color);
-  onboardLed.show();
 }
 
 // ─── Batterie ─────────────────────────────────────────────────────────────────
@@ -102,8 +92,8 @@ float readBatteryPct() {
 }
 
 // ─── WiFi ────────────────────────────────────────────────────────────────────
-const char* WIFI_SSID = "test";
-const char* WIFI_PASS = "internet";
+const char* WIFI_SSID = "Le_Moulin_2";
+const char* WIFI_PASS = "venasque";
 
 const unsigned int OSC_OUT_PORT = 8000;
 const unsigned int OSC_IN_PORT  = 8001;
@@ -114,19 +104,13 @@ IPAddress unityIP(0, 0, 0, 0);
 bool      wifiOK = false;
 
 // ─── HX711 ───────────────────────────────────────────────────────────────────
-#define LOADCELL_DAT_PIN   6
-#define LOADCELL_CLK_PIN   9
-#define LOADCELL2_DAT_PIN  10
-#define LOADCELL2_CLK_PIN  11
-#define LOADCELL3_DAT_PIN  18  // A0
-#define LOADCELL3_CLK_PIN  17  // A1
-#define LOADCELL4_DAT_PIN  16  // A2
-#define LOADCELL4_CLK_PIN  15  // A3
+#define LOADCELL_DAT_PIN  12
+#define LOADCELL_CLK_PIN  13
+#define LOADCELL2_DAT_PIN 10
+#define LOADCELL2_CLK_PIN 11
 
 float CALIBRATION_FACTOR  = 12205.0f;
 float CALIBRATION_FACTOR2 = 11035.0f;
-float CALIBRATION_FACTOR3 = 12205.0f;
-float CALIBRATION_FACTOR4 = 12205.0f;
 
 const unsigned long SEND_INTERVAL_MS = 12;
 
@@ -156,10 +140,7 @@ const unsigned long GRACE_MS = 2000;
 
 HX711 scale;
 HX711 scale2;
-HX711 scale3;
-HX711 scale4;
-int   scaleIdx = 0;
-#define NUM_SCALES 4
+bool  readScale1 = true;
 
 unsigned long lastSendTime  = 0;
 unsigned long lastStompTime = 0;
@@ -172,7 +153,7 @@ float prevRaw     = 0.0f;
 float prevMed     = 0.0f;
 float rawBefore   = 0.0f;
 float rawBaseline = 0.0f;
-float lastRead[NUM_SCALES] = {0};
+float prevOther   = 0.0f;
 const float BASELINE_ALPHA = 0.002f;
 
 bool          jumpRising     = false;
@@ -217,35 +198,28 @@ void setup() {
   led.begin();
   led.setBrightness(5);
   led.clear();
-  led.show();
-
-  onboardLed.begin();
-  onboardLed.setBrightness(5);
-  onboardLed.clear();
-  onboardLed.show();
+  led.show(); // éteindre immédiatement pour écraser l'état parasite
 
   // Flash blanc boot
-  led.setPixelColor(0, COL_WHITE);       led.show();
-  onboardLed.setPixelColor(0, COL_WHITE); onboardLed.show();
+  led.setPixelColor(0, COL_WHITE);
+  led.show();
   Serial.println("LED: flash blanc (boot)");
   delay(300);
-  led.setPixelColor(0, COL_OFF);       led.show();
-  onboardLed.setPixelColor(0, COL_OFF); onboardLed.show();
+  led.setPixelColor(0, COL_OFF);
+  led.show();
 
   // Clignotement bleu pendant recherche WiFi
-  WiFi.setHostname("RageBait_controller");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   unsigned long wifiStart = millis();
   bool blinkState = false;
   while (WiFi.status() != WL_CONNECTED && millis() - wifiStart < 5000) {
     blinkState = !blinkState;
-    uint32_t c = blinkState ? COL_BLUE : COL_OFF;
-    led.setPixelColor(0, c);       led.show();
-    onboardLed.setPixelColor(0, c); onboardLed.show();
+    led.setPixelColor(0, blinkState ? COL_BLUE : COL_OFF);
+    led.show();
     delay(500);
   }
-  led.setPixelColor(0, COL_OFF);       led.show();
-  onboardLed.setPixelColor(0, COL_OFF); onboardLed.show();
+  led.setPixelColor(0, COL_OFF);
+  led.show();
   if (WiFi.status() == WL_CONNECTED) {
     wifiOK = true;
     udp.begin(OSC_IN_PORT);
@@ -263,19 +237,11 @@ void setup() {
   scale2.set_scale(CALIBRATION_FACTOR2);
   scale2.tare();
 
-  scale3.begin(LOADCELL3_DAT_PIN, LOADCELL3_CLK_PIN);
-  scale3.set_scale(CALIBRATION_FACTOR3);
-  scale3.tare();
-
-  scale4.begin(LOADCELL4_DAT_PIN, LOADCELL4_CLK_PIN);
-  scale4.set_scale(CALIBRATION_FACTOR4);
-  scale4.tare();
-
   for (int i = 0; i < MED_SIZE; i++) medBuf[i] = 0.0f;
 
   // LED éteinte par défaut
-  led.setPixelColor(0, COL_OFF);       led.show();
-  onboardLed.setPixelColor(0, COL_OFF); onboardLed.show();
+  led.setPixelColor(0, COL_OFF);
+  led.show();
 }
 
 // ─── Loop ────────────────────────────────────────────────────────────────────
@@ -283,7 +249,6 @@ void loop() {
   unsigned long now = millis();
 
   checkIncoming();
-
 
   // WiFi reconnect
   if (!wifiOK && WiFi.status() == WL_CONNECTED) {
@@ -304,7 +269,7 @@ void loop() {
 
   // Batterie faible → rouge fixe
   if (lowBattery && !flashActive) {
-    // Serial.println("LED: rouge fixe (batterie < 20%)");
+    Serial.println("LED: rouge fixe (batterie < 20%)");
     ledSet(COL_RED);
   }
 
@@ -315,16 +280,17 @@ void loop() {
   if (!connected && !lowBattery && now - lastBlueBlink > 500) {
     lastBlueBlink = now;
     blueBlinkState = !blueBlinkState;
-    uint32_t c = blueBlinkState ? COL_BLUE : COL_OFF;
-    led.setPixelColor(0, c);       led.show();
-    onboardLed.setPixelColor(0, c); onboardLed.show();
+    led.setPixelColor(0, blueBlinkState ? COL_BLUE : COL_OFF);
+    led.show();
   }
 
   // Heartbeat vert toutes les 10s si connecté (wifi ou serial)
   if (connected && !lowBattery && now - lastHeartbeat > HEARTBEAT_MS) {
     lastHeartbeat = now;
-    // Serial.print("LED: flash vert (heartbeat)");
-    // Serial.println(wifiOK ? " wifi:OK" : " wifi:KO");
+    Serial.print("LED: flash vert (heartbeat) — wifi:");
+    Serial.print(wifiOK ? "OK" : "KO");
+    Serial.print(" serial:");
+    Serial.println((bool)Serial ? "OK" : "KO");
     ledFlash(COL_GREEN, 200);
   }
 
@@ -334,22 +300,17 @@ void loop() {
   float dt = (now - lastSendTime) / 1000.0f;
   lastSendTime = now;
 
-  HX711* scales[] = {&scale, &scale2, &scale3, &scale4};
-  if (!scales[scaleIdx]->is_ready()) return;
-  float rawThis = scales[scaleIdx]->get_units(1);
-  lastRead[scaleIdx] = rawThis;
-  scaleIdx = (scaleIdx + 1) % NUM_SCALES;
+  float rawThis = 0.0f;
+  if (readScale1) {
+    if (!scale.is_ready()) return;
+    rawThis = scale.get_units(1);
+  } else {
+    if (!scale2.is_ready()) return;
+    rawThis = scale2.get_units(1);
+  }
+  readScale1 = !readScale1;
 
-  float raw = 0.0f;
-  for (int i = 0; i < NUM_SCALES; i++) raw += lastRead[i];
-
-  // Serial Plotter : S1,S2,S3,S4,Total
-  Serial.print(lastRead[0]); Serial.print(",");
-  Serial.print(lastRead[1]); Serial.print(",");
-  Serial.print(lastRead[2]); Serial.print(",");
-  Serial.print(lastRead[3]); Serial.print(",");
-  Serial.println(raw);
-
+  float raw = rawThis + prevOther;
   medBuf[medIdx % MED_SIZE] = raw;
   medIdx++;
   float med = getMedian();
@@ -408,13 +369,14 @@ void loop() {
 
   if (stompDetected && (now - lastStompTime > STOMP_COOLDOWN_MS)) {
     lastStompTime = now;
-    // Serial.print("LED: flash jaune (stomp) — ");
-    // Serial.print(stompValue, 2);
-    // Serial.println("kg");
+    Serial.print("LED: flash jaune (stomp) — ");
+    Serial.print(stompValue, 2);
+    Serial.println("kg");
     sendOSC("/stomp", stompValue);
     ledFlash(COL_YELLOW, 120);
   }
 
+  prevOther = rawThis;
   rawBefore = raw;
   prevRaw   = raw;
   prevMed   = med;
