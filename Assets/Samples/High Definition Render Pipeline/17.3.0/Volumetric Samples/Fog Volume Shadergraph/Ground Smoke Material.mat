@@ -76,7 +76,7 @@ Material:
     - _DoubleSidedNormalMode: 2
     - _DstBlend: 0
     - _EnableFogOnTransparent: 1
-    - _Flatten: 1.68
+    - _Flatten: 1.91
     - _Float: 4
     - _FogVolumeAlphaBlendOp: 0
     - _FogVolumeBlendMode: 1

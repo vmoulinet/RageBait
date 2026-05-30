@@ -47,8 +47,13 @@ public class VideoManager : MonoBehaviour
 	public float DebrisFeedbackRaiseDuration = 0.12f;
 	public float DebrisFeedbackFallDuration = 0.20f;
 
-	[Header("Future Hooks")]
-	public float PendulumSpeedMultiplierAfterVideo = 1.25f;
+	[Header("Ground Smoke Flatten")]
+	public Material GroundSmokeMaterial;
+	public string GroundSmokeFlattenProperty = "_Flatten";
+	public float GroundSmokeFlattenRest = 1.91f;
+	public float GroundSmokeFlattenStomp = 0.8f;
+	public float GroundSmokeFlattenDescendDuration = 2f;
+	// La remontee se cale sur le fade-out du timeScale en fin d'event (TimeScaleFadeOutDuration).
 
 	readonly List<string> video_paths = new List<string>();
 	readonly List<string> sentences = new List<string>();
@@ -61,6 +66,9 @@ public class VideoManager : MonoBehaviour
 	Coroutine active_event_routine = null;
 	Coroutine active_subtitle_routine = null;
 	Coroutine debris_feedback_routine = null;
+	int ground_smoke_flatten_id = 0;
+	bool ground_smoke_property_resolved = false;
+	bool ground_smoke_has_property = false;
 	Vector3 debris_feedback_base_local_position = Vector3.zero;
 	bool debris_feedback_base_cached = false;
 	Material video_material_instance = null;
@@ -97,9 +105,69 @@ public class VideoManager : MonoBehaviour
 		}
 
 		Cache_debris_feedback_base_position();
+		Resolve_ground_smoke_property();
 
 		if (PrepareOnAwake)
 			Prepare_current_video();
+	}
+
+	void Resolve_ground_smoke_property()
+	{
+		if (ground_smoke_property_resolved || GroundSmokeMaterial == null)
+			return;
+
+		ground_smoke_flatten_id = Shader.PropertyToID(GroundSmokeFlattenProperty);
+		ground_smoke_has_property = GroundSmokeMaterial.HasProperty(ground_smoke_flatten_id);
+		ground_smoke_property_resolved = true;
+
+		if (!ground_smoke_has_property)
+			Debug.LogWarning("[video_manager] ground smoke material missing property " + GroundSmokeFlattenProperty);
+	}
+
+	void Set_ground_smoke_flatten(float value)
+	{
+		if (GroundSmokeMaterial == null)
+			return;
+
+		Resolve_ground_smoke_property();
+		if (!ground_smoke_has_property)
+			return;
+
+		GroundSmokeMaterial.SetFloat(ground_smoke_flatten_id, value);
+	}
+
+	IEnumerator Fade_ground_smoke_flatten(float from_value, float to_value, float duration)
+	{
+		if (GroundSmokeMaterial == null)
+			yield break;
+
+		Set_ground_smoke_flatten(from_value);
+
+		if (duration <= 0f)
+		{
+			Set_ground_smoke_flatten(to_value);
+			yield break;
+		}
+
+		float elapsed = 0f;
+		while (elapsed < duration)
+		{
+			elapsed += Time.unscaledDeltaTime;
+			float k = Mathf.Clamp01(elapsed / duration);
+			float eased = Mathf.SmoothStep(0f, 1f, k);
+			Set_ground_smoke_flatten(Mathf.Lerp(from_value, to_value, eased));
+			yield return null;
+		}
+
+		Set_ground_smoke_flatten(to_value);
+	}
+
+	void OnDisable()
+	{
+		// On edite le material partage : on remet la valeur au repos pour ne pas le
+		// laisser fige en bas si le play s'arrete en plein event.
+		if (GroundSmokeMaterial != null)
+			Set_ground_smoke_flatten(GroundSmokeFlattenRest);
 	}
 
 	void Ensure_video_material_instance()
@@ -554,6 +622,10 @@ public class VideoManager : MonoBehaviour
 		Set_video_visible(false);
 		Trigger_feedback_only();
 
+		// Ground Smoke : descente 1.91 -> 0.8 (la remontee se fait en fin d'event, avec le fade-out du timeScale).
+		Set_ground_smoke_flatten(GroundSmokeFlattenRest);
+		StartCoroutine(Fade_ground_smoke_flatten(GroundSmokeFlattenRest, GroundSmokeFlattenStomp, GroundSmokeFlattenDescendDuration));
+
 		if (SubtitleText != null)
 		{
 			SubtitleText.text = "";
@@ -624,10 +696,9 @@ public class VideoManager : MonoBehaviour
 			SubtitleText.text = "";
 			SubtitleText.maxVisibleCharacters = 0;
 		}
+		// Ground Smoke : remontee 0.8 -> 1.91 calee sur le fade-out du timeScale (les deux finissent ensemble).
+		StartCoroutine(Fade_ground_smoke_flatten(GroundSmokeFlattenStomp, GroundSmokeFlattenRest, TimeScaleFadeOutDuration));
 		yield return StartCoroutine(Fade_time_scale(Time.timeScale, previous_time_scale, TimeScaleFadeOutDuration));
-
-		// todo: when pendulum speed control exists, apply PendulumSpeedMultiplierAfterVideo here.
-		Debug.Log("[video_manager] event end | pendulum_speed_multiplier_after_video=" + PendulumSpeedMultiplierAfterVideo.ToString("F2"));
 
 		if (DebrisFeedbackTarget != null)
 		{

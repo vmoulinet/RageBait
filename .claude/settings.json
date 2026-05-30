@@ -9,7 +9,13 @@
       "PowerShell(Get-WinEvent -LogName \"Security\" -MaxEvents 50 -ErrorAction SilentlyContinue | Where-Object {$_.Message -match \"DAEMON|DTLite|uninst\"} | Select-Object TimeCreated, Id, @{N='Msg';E={$_.Message.Substring\\(0,[Math]::Min\\(300,$_.Message.Length\\)\\)}} | Format-List)",
       "PowerShell(Start-Process -FilePath \"C:\\\\Program Files\\\\DAEMON Tools Lite\\\\uninst.exe\" -ArgumentList \"/S\" -Verb RunAs -ErrorAction Stop; Write-Output \"Lancé\")",
       "PowerShell(Copy-Item \"C:\\\\Program Files\\\\DAEMON Tools Lite\\\\uninst.exe\" \"$env:TEMP\\\\dt_uninst.exe\" -Force; Unblock-File \"$env:TEMP\\\\dt_uninst.exe\"; Get-Item \"$env:TEMP\\\\dt_uninst.exe\" | Format-List Name, Length, LastWriteTime; Write-Output \"---Lancement---\"; Start-Process \"$env:TEMP\\\\dt_uninst.exe\")",
-      "PowerShell($sig = Get-AuthenticodeSignature \"C:\\\\Program Files\\\\DAEMON Tools Lite\\\\uninst.exe\"; Write-Output \"Status: $\\($sig.Status\\)\"; Write-Output \"StatusMessage: $\\($sig.StatusMessage\\)\"; Write-Output \"SignerCert: $\\($sig.SignerCertificate.Subject\\)\"; Write-Output \"NotAfter: $\\($sig.SignerCertificate.NotAfter\\)\")"
+      "PowerShell($sig = Get-AuthenticodeSignature \"C:\\\\Program Files\\\\DAEMON Tools Lite\\\\uninst.exe\"; Write-Output \"Status: $\\($sig.Status\\)\"; Write-Output \"StatusMessage: $\\($sig.StatusMessage\\)\"; Write-Output \"SignerCert: $\\($sig.SignerCertificate.Subject\\)\"; Write-Output \"NotAfter: $\\($sig.SignerCertificate.NotAfter\\)\")",
+      "PowerShell(\"--- top-level files ---\")",
+      "Bash(grep -i \"\\\\.cs$\")",
+      "PowerShell($f = \"Assets/scripts/core/VideoManager.cs\"; $lines = \\(Get-Content $f | Measure-Object -Line\\).Lines; \"working copy lines: $lines\"; $nonEmpty = \\(Get-Content $f | Where-Object { $_.Trim\\(\\) -ne '' } | Measure-Object\\).Count; \"non-empty lines: $nonEmpty\"; \"last 5 non-empty lines:\"; Get-Content $f | Where-Object { $_.Trim\\(\\) -ne '' } | Select-Object -Last 5)",
+      "Bash(grep -cE '^\\\\s*\\\\}\\\\s*$' Assets/scripts/core/VideoManager.cs)",
+      "PowerShell($f = \"Assets/scripts/core/VideoManager.cs\"; $bytes = [System.IO.File]::ReadAllBytes\\($f\\); \"First 3 bytes: $\\($bytes[0]\\) $\\($bytes[1]\\) $\\($bytes[2]\\)\"; if \\($bytes[0] -eq 239 -and $bytes[1] -eq 187 -and $bytes[2] -eq 191\\) { \"Encoding: UTF-8 with BOM\" } else { \"Encoding: UTF-8 no BOM \\(or ASCII\\)\" }; $raw = [System.IO.File]::ReadAllText\\($f\\); \"Contains CRLF: $\\($raw.Contains\\([char]13 + [char]10\\)\\)\"; \"Contains lone LF: $\\(\\($raw -split [char]10\\).Count - 1\\) LF total, $\\(\\($raw -split \\([char]13+[char]10\\)\\).Count - 1\\) CRLF total\")",
+      "Bash(grep -i \"\\\\.meta$\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\OmenHp\\.claude\\projects\\c--Users-OmenHp-Documents-GitHub-Chase\\memory"

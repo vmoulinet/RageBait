@@ -57,6 +57,9 @@ public class MirrorDebris : MonoBehaviour
 			{
 				initial_local_positions[i] = cached_bodies[i].transform.localPosition;
 				initial_local_rotations[i] = cached_bodies[i].transform.localRotation;
+				// Interpolation : lisse le rendu des debris entre deux steps physiques,
+				// indispensable quand timeScale est ralenti pendant l'event VideoManager (sinon saccade).
+				cached_bodies[i].interpolation = RigidbodyInterpolation.Interpolate;
 			}
 		}
 
