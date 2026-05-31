@@ -19,7 +19,8 @@
       "Bash(ffmpeg -i \"/c/Users/OmenHp/Downloads/daddy_loves_you_a.wav\")",
       "Bash(ffmpeg -y -i \"/c/Users/OmenHp/Downloads/daddy_loves_you_a.wav\" -c:a libvorbis -qscale:a 5 \"/c/Users/OmenHp/Documents/GitHub/Chase/Assets/Audio/daddy_loves_you_a.ogg\")",
       "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
-      "Bash(py -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")"
+      "Bash(py -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
+      "Bash(xxd)"
     ]
   }
 }

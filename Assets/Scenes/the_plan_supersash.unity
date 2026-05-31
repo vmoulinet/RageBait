@@ -937,7 +937,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &184168023
 Transform:
   m_ObjectHideFlags: 0
@@ -2739,10 +2739,16 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 019956ba68f1f4228ad2d4d4b59dbe38, type: 3}
   - {fileID: 8300000, guid: 6ea8479e1cf874b8ebd1638d9fcdf943, type: 3}
   - {fileID: 8300000, guid: 3c718ee10c81d42909bcd5e25c3b66d6, type: 3}
-  MirrorBreakVolume: 3
+  MirrorBreakVolume: 5.13
   MirrorBreakPitchRandom: 0.06
   MirrorBreakSpatialBlend: 1
   RuntimeRoot: {fileID: 2091444931}
+  MirrorBreakReverbEnabled: 1
+  MirrorBreakReverbPreset: 26
+  MirrorBreakReverbDryLevel: 66
+  MirrorBreakReverbRoom: 24
+  MirrorBreakReverbDecayTime: 91.5
+  MirrorBreakReverbLevel: 618.2
   PendulumLoopSources:
   - {fileID: 1837470025}
   - {fileID: 205338340}
@@ -2752,6 +2758,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c20679721dd134bd2b4421c942a1e7a2, type: 3}
   - {fileID: 8300000, guid: d07eacbc654fd4aa09f4e3f2ad4c8fe1, type: 3}
   PendulumEmitter: {fileID: 1273109186}
+  PendulumLoopVolume: 0.53
   PendulumPanTarget: {fileID: 1273109186}
   PendulumPanLeftX: -19
   PendulumPanRightX: 19
@@ -2759,10 +2766,16 @@ MonoBehaviour:
   PendulumVolumeFade: 0.98
   TypingLoopSource: {fileID: 1666299928}
   TypingLoopClip: {fileID: 8300000, guid: 990f14c28664e41ab935f04d5769d43e, type: 3}
-  TypingLoopVolume: 0.08
+  TypingLoopVolume: 0.07
+  TypingReverbEnabled: 1
+  TypingReverbPreset: 26
+  TypingReverbDryLevel: 66.2
+  TypingReverbRoom: 24.07
+  TypingReverbDecayTime: 96.99
+  TypingReverbLevel: 822.2
   DaddyLoopSource: {fileID: 0}
   DaddyLoopClip: {fileID: 8300000, guid: f47a5be7fee2426abc6593d8e3462c68, type: 3}
-  DaddyLoopVolume: 1
+  DaddyLoopVolume: 1.82
   DebugSound: 0
 --- !u!1 &645884743
 GameObject:
@@ -2806,8 +2819,9 @@ MonoBehaviour:
   DaddyLetterProjector: {fileID: 272237673}
   StartingMirrorCount: 9
   SpawnInterval: 3
-  RespawnDelay: 1
+  RespawnDelay: 4
   RespawnRingSpacing: 0.75
+  RespawnStagger: 1
   MaxDebrisCount: 25
   BreakBoostMultiplier: 1.91
   BreakBoostDuration: 7.66
@@ -4133,13 +4147,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 919152441}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.807775, y: -0, z: -0, w: -0.58949083}
+  m_LocalRotation: {x: -0.7742732, y: -0, z: -0, w: -0.6328515}
   m_LocalPosition: {x: 0, y: 10.779999, z: -9.02204}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1154602364}
-  m_LocalEulerAnglesHint: {x: 467.758, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 461.478, y: 0, z: 0}
 --- !u!114 &919152443
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6780,74 +6794,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: -2.57, z: 0}
---- !u!1001 &1557868930
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 2399313394201642664, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_Name
-      value: NeuMirrorActor
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 6.421
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalPosition.y
-      value: -0.02993448
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -3.807
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalRotation.w
-      value: -0.53561413
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0.84446293
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 244.771
-      objectReference: {fileID: 0}
-    - target: {fileID: 3028603118646041618, guid: 7c6315505a1254c47b97dbbddc0f7dd3,
-        type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 7c6315505a1254c47b97dbbddc0f7dd3, type: 3}
 --- !u!1 &1636061247
 GameObject:
   m_ObjectHideFlags: 0
@@ -8379,10 +8325,10 @@ Light:
   serializedVersion: 12
   m_Type: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 7774.2837
+  m_Intensity: 7408.2954
   m_Range: 10
-  m_SpotAngle: 156.82808
-  m_InnerSpotAngle: 21.80208
+  m_SpotAngle: 129.89548
+  m_InnerSpotAngle: 3.448425
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
     m_Type: 0
@@ -9631,4 +9577,3 @@ SceneRoots:
   - {fileID: 1504489925}
   - {fileID: 281853721}
   - {fileID: 272237674}
-  - {fileID: 1557868930}

@@ -9,10 +9,21 @@ public class SoundManager : MonoBehaviour
 	public float MirrorBreakSpatialBlend = 1f;
 	public Transform RuntimeRoot;
 
+	[Header("Mirror Shatter Reverb")]
+	public bool MirrorBreakReverbEnabled = false;
+	public AudioReverbPreset MirrorBreakReverbPreset = AudioReverbPreset.Hallway;
+	[Tooltip("Only applied when MirrorBreakReverbPreset is set to User.")]
+	public float MirrorBreakReverbDryLevel = 0f;
+	public float MirrorBreakReverbRoom = 0f;
+	public float MirrorBreakReverbDecayTime = 1f;
+	public float MirrorBreakReverbLevel = 0f;
+
 	[Header("Pendulum Loop")]
 	public AudioSource[] PendulumLoopSources = new AudioSource[3];
 	public AudioClip[] PendulumLoopClips = new AudioClip[3];
 	public Transform PendulumEmitter;
+	[Range(0f, 1f)]
+	public float PendulumLoopVolume = 1f;
 
 	[Header("Pendulum Pan")]
 	public Transform PendulumPanTarget;
@@ -25,6 +36,16 @@ public class SoundManager : MonoBehaviour
 	public AudioSource TypingLoopSource;
 	public AudioClip TypingLoopClip;
 	public float TypingLoopVolume = 1f;
+
+	[Header("Typing Loop Reverb")]
+	public bool TypingReverbEnabled = false;
+	public AudioReverbPreset TypingReverbPreset = AudioReverbPreset.Hallway;
+	[Tooltip("Only applied when TypingReverbPreset is set to User.")]
+	public float TypingReverbDryLevel = 0f;
+	public float TypingReverbRoom = 0f;
+	public float TypingReverbDecayTime = 1f;
+	public float TypingReverbLevel = 0f;
+	AudioReverbFilter typing_reverb_filter;
 
 	[Header("Daddy Loves You Loop")]
 	public AudioSource DaddyLoopSource;
@@ -104,6 +125,8 @@ public class SoundManager : MonoBehaviour
 		if (TypingLoopSource != null)
 			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
 
+		Ensure_typing_reverb();
+
 		if (DaddyLoopSource == null)
 		{
 			DaddyLoopSource = Create_loop_source("daddy_loves_you_loop_audio_source", transform);
@@ -115,6 +138,43 @@ public class SoundManager : MonoBehaviour
 
 		if (DaddyLoopSource != null)
 			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+	}
+
+	void Ensure_typing_reverb()
+	{
+		if (TypingLoopSource == null)
+			return;
+
+		if (typing_reverb_filter == null)
+		{
+			typing_reverb_filter = TypingLoopSource.GetComponent<AudioReverbFilter>();
+			if (typing_reverb_filter == null)
+				typing_reverb_filter = TypingLoopSource.gameObject.AddComponent<AudioReverbFilter>();
+		}
+
+		Apply_typing_reverb();
+	}
+
+	void Apply_typing_reverb()
+	{
+		if (typing_reverb_filter == null)
+			return;
+
+		typing_reverb_filter.enabled = TypingReverbEnabled;
+
+		if (!TypingReverbEnabled)
+			return;
+
+		typing_reverb_filter.reverbPreset = TypingReverbPreset;
+
+		// reverbPreset == User lets us drive the individual parameters by hand.
+		if (TypingReverbPreset == AudioReverbPreset.User)
+		{
+			typing_reverb_filter.dryLevel = TypingReverbDryLevel;
+			typing_reverb_filter.room = TypingReverbRoom;
+			typing_reverb_filter.decayTime = Mathf.Max(0.1f, TypingReverbDecayTime);
+			typing_reverb_filter.reverbLevel = TypingReverbLevel;
+		}
 	}
 
 	void Ensure_pendulum_arrays()
@@ -193,10 +253,10 @@ public class SoundManager : MonoBehaviour
 
 	public void PlayMirrorBreak(Vector3 world_position)
 	{
-		Play_one_shot(MirrorBreakClips, world_position, MirrorBreakVolume, MirrorBreakPitchRandom, MirrorBreakSpatialBlend, "mirror_break");
+		Play_one_shot(MirrorBreakClips, world_position, MirrorBreakVolume, MirrorBreakPitchRandom, MirrorBreakSpatialBlend, "mirror_break", MirrorBreakReverbEnabled);
 	}
 
-	void Play_one_shot(AudioClip[] clips, Vector3 world_position, float volume, float pitch_random, float spatial_blend, string label)
+	void Play_one_shot(AudioClip[] clips, Vector3 world_position, float volume, float pitch_random, float spatial_blend, string label, bool apply_reverb = false)
 	{
 		if (clips == null || clips.Length == 0)
 			return;
@@ -216,6 +276,13 @@ public class SoundManager : MonoBehaviour
 		source.pitch = pitch;
 		source.spatialBlend = Mathf.Clamp01(spatial_blend);
 		source.playOnAwake = false;
+
+		if (apply_reverb)
+		{
+			AudioReverbFilter reverb = one_shot_object.AddComponent<AudioReverbFilter>();
+			Configure_mirror_break_reverb(reverb);
+		}
+
 		source.PlayOneShot(clip, Mathf.Max(0f, volume));
 
 		Destroy(one_shot_object, clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch)) + 0.1f);
@@ -229,6 +296,23 @@ public class SoundManager : MonoBehaviour
 				" | volume=" + volume.ToString("F2") +
 				" | pitch=" + pitch.ToString("F2")
 			);
+		}
+	}
+
+	void Configure_mirror_break_reverb(AudioReverbFilter reverb)
+	{
+		if (reverb == null)
+			return;
+
+		reverb.reverbPreset = MirrorBreakReverbPreset;
+
+		// reverbPreset == User lets us drive the individual parameters by hand.
+		if (MirrorBreakReverbPreset == AudioReverbPreset.User)
+		{
+			reverb.dryLevel = MirrorBreakReverbDryLevel;
+			reverb.room = MirrorBreakReverbRoom;
+			reverb.decayTime = Mathf.Max(0.1f, MirrorBreakReverbDecayTime);
+			reverb.reverbLevel = MirrorBreakReverbLevel;
 		}
 	}
 
@@ -318,6 +402,8 @@ public class SoundManager : MonoBehaviour
 			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
 		}
 
+		Apply_typing_reverb();
+
 		if (DaddyLoopSource != null && DaddyLoopSource.clip != null)
 		{
 			DaddyLoopSource.loop = true;
@@ -365,7 +451,7 @@ public class SoundManager : MonoBehaviour
 				continue;
 
 			source.panStereo = current_pendulum_pan;
-			source.volume = current_pendulum_volume;
+			source.volume = current_pendulum_volume * Mathf.Clamp01(PendulumLoopVolume);
 		}
 	}
 }
