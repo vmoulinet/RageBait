@@ -11,7 +11,11 @@
       "Bash(dotnet --version)",
       "Bash(git stash *)",
       "Bash(find Assets/scripts -type d -name \"Editor\")",
-      "Bash(ls Assets/scripts)"
+      "Bash(ls Assets/scripts)",
+      "Bash(rm -f \"Assets/scripts/Editor/FlattenChildScale.cs\" \"Assets/scripts/Editor/FlattenChildScale.cs.meta\")",
+      "Bash(rmdir \"Assets/scripts/Editor\")",
+      "Bash(rm -f \"Assets/scripts/Editor.meta\")",
+      "Bash(ls \"Assets/scripts/Editor\")"
     ]
   }
 }

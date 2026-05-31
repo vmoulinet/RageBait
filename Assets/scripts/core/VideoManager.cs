@@ -28,6 +28,10 @@ public class VideoManager : MonoBehaviour
 	public float SimulationTimeScaleDuringEvent = 0.35f;
 	public float TimeScaleFadeInDuration = 0.35f;
 	public float TimeScaleFadeOutDuration = 0.35f;
+	[Tooltip("Plancher du pas physique pendant le ralenti. fixedDeltaTime = base * timeScale, borne " +
+		"a ce minimum pour ne pas saturer le CPU (trop de steps/sec) au ralenti extreme. " +
+		"Plus haut = moins de charge mais leger retour de saccade ; ~0.005 (200 Hz) est un bon compromis.")]
+	public float MinFixedDeltaTime = 0.0045f;
 	public float VideoFadeInDuration = 0.12f;
 	public float VideoFadeOutDuration = 0.12f;
 
@@ -63,6 +67,9 @@ public class VideoManager : MonoBehaviour
 	int prepared_video_index = -1;
 
 	float previous_time_scale = 1f;
+	// Pas physique de reference : pendant le ralenti on reduit fixedDeltaTime proportionnellement
+	// au timeScale pour que la physique reste fluide (sinon gros pas espaces -> saccade des debris).
+	float base_fixed_delta_time = 0.02f;
 	Coroutine active_event_routine = null;
 	Coroutine active_subtitle_routine = null;
 	Coroutine debris_feedback_routine = null;
@@ -92,6 +99,7 @@ public class VideoManager : MonoBehaviour
 
 	void Awake()
 	{
+		base_fixed_delta_time = Time.fixedDeltaTime;
 		Ensure_video_player();
 		Ensure_video_material_instance();
 		Set_video_visible(false);
@@ -254,7 +262,7 @@ public class VideoManager : MonoBehaviour
 	{
 		if (duration <= 0f)
 		{
-			Time.timeScale = to_scale;
+			Apply_time_scale(to_scale);
 			yield break;
 		}
 
@@ -264,11 +272,23 @@ public class VideoManager : MonoBehaviour
 			elapsed += Time.unscaledDeltaTime;
 			float t = Mathf.Clamp01(elapsed / duration);
 			float eased = Mathf.SmoothStep(0f, 1f, t);
-			Time.timeScale = Mathf.Lerp(from_scale, to_scale, eased);
+			Apply_time_scale(Mathf.Lerp(from_scale, to_scale, eased));
 			yield return null;
 		}
 
-		Time.timeScale = to_scale;
+		Apply_time_scale(to_scale);
+	}
+
+	// Regle timeScale ET fixedDeltaTime ensemble : en ralenti, on reduit le pas physique pour
+	// garder une cadence de simulation reelle constante (mouvement fluide, pas de saccade).
+	// Du coup l'interpolation des Rigidbody est inutile (et on l'evite, car instable sur les
+	// fragments scales du prefab debris).
+	void Apply_time_scale(float scale)
+	{
+		Time.timeScale = scale;
+		// Borne le pas physique : sans plancher, timeScale tres bas -> fixedDeltaTime minuscule
+		// -> des centaines de steps/sec -> frame drop. Le plancher limite la charge CPU.
+		Time.fixedDeltaTime = Mathf.Max(MinFixedDeltaTime, base_fixed_delta_time * Mathf.Max(0.0001f, scale));
 	}
 
 	void Set_video_visible(bool visible)

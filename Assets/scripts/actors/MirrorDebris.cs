@@ -23,12 +23,6 @@ public class MirrorDebris : MonoBehaviour
 	public float SinkFastBelowY = -1f;
 	public float SinkDestroyBelowY = -10f;
 
-	[Header("Interpolation")]
-	[Tooltip("Delai (s) apres le bris avant d'activer l'interpolation des fragments. " +
-		"Pendant ce delai les fragments restent en None pour eviter la teleportation due au scale parent ; " +
-		"ensuite on passe en Interpolate pour le lissage pendant l'event ralenti.")]
-	public float EnableInterpolationDelay = 0.5f;
-
 	SoundManager sound_manager;
 	MirrorActor source_actor;
 	Vector3 source_impact_direction = Vector3.zero;
@@ -39,8 +33,6 @@ public class MirrorDebris : MonoBehaviour
 	bool is_sinking = false;
 	bool snapshot_taken = false;
 	float activate_time = 0f;
-	bool interpolation_enabled = false;
-	float interpolation_enable_at = -1f;
 
 	public bool IsSinking => is_sinking;
 	public float ActivateTime => activate_time;
@@ -65,11 +57,11 @@ public class MirrorDebris : MonoBehaviour
 			{
 				initial_local_positions[i] = cached_bodies[i].transform.localPosition;
 				initial_local_rotations[i] = cached_bodies[i].transform.localRotation;
-				// Pas d'interpolation au depart : ces Rigidbody vivent sous un parent au scale != 1,
-				// et l'interpolation/extrapolation y est instable pendant les premieres frames apres
-				// le bris (conversion monde<->local degeneree -> les fragments se teleportent).
-				// On l'active seulement une fois le debris stabilise (cf. EnableInterpolationDelay),
-				// pour retrouver le lissage anti-saccade pendant l'event VideoManager ralenti.
+				// Pas d'interpolation : ces Rigidbody vivent sous un parent au scale != 1
+				// (BrokenFrameRoot ~0.35), ou l'interpolation est instable et teleporte les
+				// fragments. La fluidite pendant l'event ralenti est assuree autrement :
+				// VideoManager scale Time.fixedDeltaTime avec le timeScale (cf. Apply_time_scale),
+				// donc la physique reste fluide sans interpolation.
 				cached_bodies[i].interpolation = RigidbodyInterpolation.None;
 			}
 		}
@@ -85,8 +77,6 @@ public class MirrorDebris : MonoBehaviour
 		activate_time = Time.time;
 		source_actor = null;
 		source_impact_direction = Vector3.zero;
-		interpolation_enabled = false;
-		interpolation_enable_at = -1f;
 
 		for (int i = 0; i < cached_bodies.Length; i++)
 		{
@@ -100,7 +90,6 @@ public class MirrorDebris : MonoBehaviour
 			cached_bodies[i].angularVelocity = Vector3.zero;
 			cached_bodies[i].useGravity = true;
 			cached_bodies[i].detectCollisions = true;
-			cached_bodies[i].interpolation = RigidbodyInterpolation.None;
 		}
 
 		gameObject.SetActive(true);
@@ -133,8 +122,6 @@ public class MirrorDebris : MonoBehaviour
 
 	void Update()
 	{
-		UpdateInterpolationActivation();
-
 		if (!is_sinking)
 			return;
 
@@ -148,40 +135,6 @@ public class MirrorDebris : MonoBehaviour
 		}
 
 		transform.position += Vector3.down * speed * Time.deltaTime;
-	}
-
-	// Passe les fragments en Interpolate une fois le debris stabilise (apres EnableInterpolationDelay).
-	// Avant ce delai ils restent en None, sinon le scale du parent rend l'interpolation instable
-	// et teleporte les fragments dans les premieres frames apres le bris.
-	void UpdateInterpolationActivation()
-	{
-		if (interpolation_enabled || interpolation_enable_at < 0f)
-			return;
-
-		if (Time.time < interpolation_enable_at)
-			return;
-
-		SetFragmentsInterpolation(RigidbodyInterpolation.Interpolate);
-		interpolation_enabled = true;
-	}
-
-	void SetFragmentsInterpolation(RigidbodyInterpolation mode)
-	{
-		if (cached_bodies == null)
-			return;
-
-		for (int i = 0; i < cached_bodies.Length; i++)
-		{
-			if (cached_bodies[i] != null)
-				cached_bodies[i].interpolation = mode;
-		}
-	}
-
-	void ArmInterpolationActivation()
-	{
-		SetFragmentsInterpolation(RigidbodyInterpolation.None);
-		interpolation_enabled = false;
-		interpolation_enable_at = Time.time + Mathf.Max(0f, EnableInterpolationDelay);
 	}
 
 	public void InitializeFromMirror(MirrorActor actor)
@@ -242,10 +195,6 @@ public class MirrorDebris : MonoBehaviour
 			if (torque > 0f)
 				body.AddTorque(Random.insideUnitSphere * torque, ForceMode.VelocityChange);
 		}
-
-		// Bris : on (re)part en None, et on programme l'activation de l'interpolation
-		// une fois les fragments stabilises.
-		ArmInterpolationActivation();
 
 		if (DebugDebris)
 		{
