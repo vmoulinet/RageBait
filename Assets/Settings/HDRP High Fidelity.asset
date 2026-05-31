@@ -52,10 +52,10 @@ MonoBehaviour:
     supportTransparentDepthPostpass: 1
     colorBufferFormat: 48
     depthBufferFormat: 0
-    supportCustomPass: 1
-    supportVariableRateShading: 1
+    supportCustomPass: 0
+    supportVariableRateShading: 0
     customBufferFormat: 12
-    supportedLitShaderMode: 2
+    supportedLitShaderMode: 1
     planarReflectionResolution:
       m_Values: 000100000004000000080000
       m_SchemaId:
@@ -70,7 +70,7 @@ MonoBehaviour:
     decalNormalBufferHP: 0
     supportHighQualityLineRendering: 0
     highQualityLineRenderingMemoryBudget: 128
-    msaaSampleCount: 1
+    msaaSampleCount: 8
     supportMotionVectors: 1
     supportScreenSpaceLensFlare: 1
     supportDataDrivenLensFlare: 1
@@ -86,7 +86,7 @@ MonoBehaviour:
     supportProbeVolumeScenarios: 0
     supportProbeVolumeScenarioBlending: 1
     probeVolumeBlendingMemoryBudget: 128
-    supportRayTracing: 1
+    supportRayTracing: 0
     supportVFXRayTracing: 0
     supportedRayTracingMode: 2
     lightLoopSettings:
@@ -167,11 +167,12 @@ MonoBehaviour:
       lutFormat: 48
       bufferFormat: 48
     dynamicResolutionSettings:
-      enabled: 0
+      enabled: 1
       useMipBias: 0
       advancedUpscalersByPriority: 
-      advancedUpscalerNames: []
-      DLSSPerfQualitySetting: 0
+      advancedUpscalerNames:
+      - DLSS
+      DLSSPerfQualitySetting: 4
       DLSSInjectionPoint: 0
       TAAUInjectionPoint: 0
       STPInjectionPoint: 0
@@ -194,7 +195,7 @@ MonoBehaviour:
       minPercentage: 100
       dynResType: 1
       upsampleFilter: 1
-      forceResolution: 0
+      forceResolution: 1
       forcedPercentage: 100
       lowResTransparencyMinimumThreshold: 0
       rayTracingHalfResThreshold: 50
