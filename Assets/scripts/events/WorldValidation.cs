@@ -17,6 +17,8 @@ public class WorldValidation : MonoBehaviour
 	public DaddyLetterProjector DaddyLetterProjector;
 	public SoundManager SoundManager;
 	public RippleEffectController RippleEffect;
+	[Tooltip("Used to find each mirror's Individual PointLight.")]
+	public MirrorManager MirrorManager;
 
 	[Header("Timing")]
 	public float AttractDuration = 2.0f;
@@ -45,6 +47,10 @@ public class WorldValidation : MonoBehaviour
 	public Vector3 PropelDirection = Vector3.forward;
 	public float PropelForce = 40f;
 
+	[Header("Individual Light Ramp")]
+	[Tooltip("Each mirror's Individual PointLight ramps from its current intensity up to this value, reaching it at propel, then returns to the start value.")]
+	public float IndividualLightMaxIntensity = 80f;
+
 	[Header("Debug")]
 	public bool DebugLog = true;
 	public bool EnableKeyboardTrigger = true;
@@ -58,6 +64,8 @@ public class WorldValidation : MonoBehaviour
 	MirrorDebris[] cached_debris;
 	int[] cached_orbital_sign; // +1 or -1
 	bool ripple_fired = false;
+	Light[] cached_individual_lights;
+	float[] cached_individual_light_start;
 
 	public Phase CurrentPhase => current_phase;
 	public bool IsActive => current_phase != Phase.Idle && current_phase != Phase.Done;
@@ -96,6 +104,7 @@ public class WorldValidation : MonoBehaviour
 		SaveState();
 		SetGravity(false);
 		ApplyInitialSpin();
+		CacheIndividualLights();
 
 		current_phase = Phase.Attract;
 		phase_timer = 0f;
@@ -125,6 +134,7 @@ public class WorldValidation : MonoBehaviour
 		phase_timer += Time.fixedDeltaTime;
 
 		MaybeFireRipple();
+		UpdateIndividualLightRamp();
 
 		switch (current_phase)
 		{
@@ -155,6 +165,7 @@ public class WorldValidation : MonoBehaviour
 		if (next == Phase.Done)
 		{
 			RestoreState();
+			RestoreIndividualLights();
 
 			if (SoundManager != null)
 				SoundManager.ResumeTypingLoopAfterEvent();
@@ -185,6 +196,77 @@ public class WorldValidation : MonoBehaviour
 			if (DebugLog)
 				Debug.Log("[world_validation] ripple fired | elapsed=" + elapsed.ToString("F2") +
 					" | fire_at=" + fire_at.ToString("F2"));
+		}
+	}
+
+	// === Individual PointLight ramp ===================================================
+
+	void CacheIndividualLights()
+	{
+		cached_individual_lights = null;
+		cached_individual_light_start = null;
+
+		if (MirrorManager == null || MirrorManager.ActiveMirrors == null)
+			return;
+
+		System.Collections.Generic.List<Light> lights = new System.Collections.Generic.List<Light>();
+		System.Collections.Generic.List<MirrorActor> mirrors = MirrorManager.ActiveMirrors;
+
+		for (int i = 0; i < mirrors.Count; i++)
+		{
+			MirrorActor mirror = mirrors[i];
+			if (mirror == null)
+				continue;
+
+			Light[] child_lights = mirror.GetComponentsInChildren<Light>(true);
+			for (int j = 0; j < child_lights.Length; j++)
+			{
+				Light light = child_lights[j];
+				if (light != null && light.gameObject.name == "Individual PointLight")
+					lights.Add(light);
+			}
+		}
+
+		cached_individual_lights = lights.ToArray();
+		cached_individual_light_start = new float[cached_individual_lights.Length];
+		for (int i = 0; i < cached_individual_lights.Length; i++)
+			cached_individual_light_start[i] = cached_individual_lights[i] != null ? cached_individual_lights[i].intensity : 0f;
+
+		if (DebugLog)
+			Debug.Log("[world_validation] cached individual lights | count=" + cached_individual_lights.Length);
+	}
+
+	// Ramp each Individual PointLight from its start intensity up to the max, reaching
+	// the max at propel (end of Attract).
+	void UpdateIndividualLightRamp()
+	{
+		if (cached_individual_lights == null || cached_individual_light_start == null)
+			return;
+
+		if (current_phase != Phase.Attract)
+			return;
+
+		float factor = AttractDuration > 0.0001f ? Mathf.Clamp01(phase_timer / AttractDuration) : 1f;
+
+		for (int i = 0; i < cached_individual_lights.Length; i++)
+		{
+			Light light = cached_individual_lights[i];
+			if (light == null)
+				continue;
+
+			light.intensity = Mathf.Lerp(cached_individual_light_start[i], IndividualLightMaxIntensity, factor);
+		}
+	}
+
+	void RestoreIndividualLights()
+	{
+		if (cached_individual_lights == null || cached_individual_light_start == null)
+			return;
+
+		for (int i = 0; i < cached_individual_lights.Length; i++)
+		{
+			if (cached_individual_lights[i] != null)
+				cached_individual_lights[i].intensity = cached_individual_light_start[i];
 		}
 	}
 
@@ -305,6 +387,8 @@ public class WorldValidation : MonoBehaviour
 			body.linearDamping = 0f;
 			body.AddForce(direction * PropelForce, ForceMode.VelocityChange);
 		}
+
+		RestoreIndividualLights();
 
 		if (DebugLog)
 			Debug.Log("[world_validation] propel | direction=" + direction.ToString("F2") + " | force=" + PropelForce);

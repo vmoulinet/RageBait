@@ -1799,6 +1799,7 @@ MonoBehaviour:
   SubtitleText: {fileID: 0}
   CameraShake: {fileID: 1823688470}
   DebrisFeedbackTarget: {fileID: 749481879}
+  WorldValidation: {fileID: 919968336}
   VideosFolderRelative: VIDEOS
   WordListRelative: 
   PrepareOnAwake: 1
@@ -1825,6 +1826,57 @@ MonoBehaviour:
   GroundSmokeFlattenProperty: _Flatten
   GroundSmokeFlattenRest: 1.91
   GroundSmokeFlattenStomp: 0.8
+  GroundSmokePuffCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.035554692
+      value: 0.5172185
+      inSlope: 2.9774647
+      outSlope: 2.9774647
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.42776594
+      value: 0.8095245
+      inSlope: 0.57138246
+      outSlope: 0.57138246
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.61144376
+      outWeight: 0.24320081
+    - serializedVersion: 3
+      time: 0.9152752
+      value: 0.78573537
+      inSlope: -2.168783
+      outSlope: -2.168783
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   GroundSmokeFlattenDescendDuration: 0.16
 --- !u!1 &389468699
 GameObject:
@@ -4577,6 +4629,14 @@ MonoBehaviour:
   DaddyLetterProjector: {fileID: 272237673}
   SoundManager: {fileID: 633454979}
   RippleEffect: {fileID: 878916775}
+  MirrorManager: {fileID: 645884744}
+  SkyVolume: {fileID: 878916774}
+  ChargeDuration: 3
+  LightBaseIntensity: 18.5
+  LightMaxIntensity: 40000
+  ChargeStartExposure: 6.7
+  ChargeTargetExposure: 10
+  ReturnDuration: 0.2
   AttractDuration: 6.94
   PropelDelay: 1.08
   RippleLeadTime: 0.05
