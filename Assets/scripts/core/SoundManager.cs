@@ -55,6 +55,9 @@ public class SoundManager : MonoBehaviour
 	[Header("Debug")]
 	public bool DebugSound = false;
 
+	bool typing_loop_running = false;
+	int typing_loop_suspend_count = 0;
+
 	float current_pendulum_pan = 0f;
 	float current_pendulum_volume = 1f;
 	const float internal_pendulum_pan_smooth_speed = 8f;
@@ -229,7 +232,8 @@ public class SoundManager : MonoBehaviour
 		for (int i = 0; i < PendulumLoopSources.Length; i++)
 			Start_loop_if_needed(PendulumLoopSources[i], PendulumLoopClips[i]);
 
-		Start_loop_if_needed(TypingLoopSource, TypingLoopClip);
+		typing_loop_running = true;
+		ApplyTypingLoopState();
 
 		Start_loop_if_needed(DaddyLoopSource, DaddyLoopClip);
 		if (DaddyLoopSource != null)
@@ -326,18 +330,42 @@ public class SoundManager : MonoBehaviour
 		// Compatibility hook: pendulum audio behavior is now controlled on the AudioSources directly.
 	}
 
+	// Marks whether the typing loop should be playing at all. The loop is
+	// automatically silenced while one or more events are suspending it.
 	public void SetTypingLoopActive(bool active)
+	{
+		typing_loop_running = active;
+		ApplyTypingLoopState();
+	}
+
+	// Call when an event (world validation, stomp, ...) begins. The typing
+	// loop pauses and resumes on its own once every event has ended.
+	public void SuspendTypingLoopForEvent()
+	{
+		typing_loop_suspend_count++;
+		ApplyTypingLoopState();
+	}
+
+	public void ResumeTypingLoopAfterEvent()
+	{
+		if (typing_loop_suspend_count > 0)
+			typing_loop_suspend_count--;
+		ApplyTypingLoopState();
+	}
+
+	void ApplyTypingLoopState()
 	{
 		if (TypingLoopSource == null)
 			return;
 
-		if (active)
+		bool should_play = typing_loop_running && typing_loop_suspend_count <= 0;
+
+		if (should_play)
 		{
 			if (TypingLoopSource.clip == null && TypingLoopClip != null)
 				TypingLoopSource.clip = TypingLoopClip;
 
 			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
-
 			TypingLoopSource.loop = true;
 
 			if (TypingLoopSource.clip != null && !TypingLoopSource.isPlaying)

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class EventManager : MonoBehaviour
@@ -6,6 +7,7 @@ public class EventManager : MonoBehaviour
 	public SimulationManager SimulationManager;
 	public VideoManager VideoManager;
 	public DaddyLetterProjector DaddyLetterProjector;
+	public SoundManager SoundManager;
 
 	[Header("Debug")]
 	public bool EnableKeyboardDebugStomp = true;
@@ -14,6 +16,7 @@ public class EventManager : MonoBehaviour
 
 	[Header("Routing")]
 	public bool StompTriggersVideo = true;
+	public float TypingResumeTimeout = 30f;
 
 	int stomp_count = 0;
 	float last_stomp_time = -999f;
@@ -49,6 +52,9 @@ public class EventManager : MonoBehaviour
 
 		if (VideoManager == null && sim != null)
 			VideoManager = sim.VideoManager;
+
+		if (SoundManager == null && sim != null)
+			SoundManager = sim.SoundManager;
 
 		if (DebugLogEvents)
 		{
@@ -105,6 +111,36 @@ public class EventManager : MonoBehaviour
 			return;
 		}
 
+		// Pause the typing loop for the duration of the video event, then let
+		// it resume on its own once the event is over.
+		if (SoundManager != null && isActiveAndEnabled)
+		{
+			SoundManager.SuspendTypingLoopForEvent();
+			StartCoroutine(ResumeTypingWhenVideoEnds());
+		}
+
 		VideoManager.Play_video_event();
+	}
+
+	IEnumerator ResumeTypingWhenVideoEnds()
+	{
+		float elapsed = 0f;
+
+		// Give the video routine a moment to flag itself as playing.
+		while (!VideoManager.IsPlayingEvent && elapsed < 1f)
+		{
+			elapsed += Time.unscaledDeltaTime;
+			yield return null;
+		}
+
+		elapsed = 0f;
+		while (VideoManager.IsPlayingEvent && elapsed < TypingResumeTimeout)
+		{
+			elapsed += Time.unscaledDeltaTime;
+			yield return null;
+		}
+
+		if (SoundManager != null)
+			SoundManager.ResumeTypingLoopAfterEvent();
 	}
 }

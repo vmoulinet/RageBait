@@ -15,6 +15,7 @@ public class WorldValidation : MonoBehaviour
 	public Transform DebrisRoot;
 	public Transform AttractCenter;
 	public DaddyLetterProjector DaddyLetterProjector;
+	public SoundManager SoundManager;
 
 	[Header("Timing")]
 	public float AttractDuration = 2.0f;
@@ -98,6 +99,9 @@ public class WorldValidation : MonoBehaviour
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyWorldValidation();
 
+		if (SoundManager != null)
+			SoundManager.SuspendTypingLoopForEvent();
+
 		if (DebugLog)
 			Debug.Log("[world_validation] trigger | bodies=" + cached_bodies.Length);
 	}
@@ -142,7 +146,12 @@ public class WorldValidation : MonoBehaviour
 		phase_timer = 0f;
 
 		if (next == Phase.Done)
+		{
 			RestoreState();
+
+			if (SoundManager != null)
+				SoundManager.ResumeTypingLoopAfterEvent();
+		}
 	}
 
 	void ApplyInitialSpin()

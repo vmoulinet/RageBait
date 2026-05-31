@@ -235,10 +235,10 @@ public class DaddyLetterProjector : MonoBehaviour
 
 	void SetTypingSound(bool active)
 	{
-		if (SoundManager == null)
-			return;
-
-		SoundManager.SetTypingLoopActive(active);
+		// The typing loop is now owned by SoundManager and driven by event
+		// suspend/resume (world validation, stomp). The projector no longer
+		// starts or stops the audio so both scene variants stay consistent
+		// whether or not this projector object is present.
 	}
 
 	void StopActiveCoroutine()
