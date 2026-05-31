@@ -16,10 +16,13 @@ public class WorldValidation : MonoBehaviour
 	public Transform AttractCenter;
 	public DaddyLetterProjector DaddyLetterProjector;
 	public SoundManager SoundManager;
+	public RippleEffectController RippleEffect;
 
 	[Header("Timing")]
 	public float AttractDuration = 2.0f;
 	public float PropelDelay = 0.3f;
+	[Tooltip("Fire the ripple this many seconds BEFORE the event ends (Done).")]
+	public float RippleLeadTime = 0.3f;
 
 	[Header("Attract")]
 	public float AttractForce = 12f;
@@ -54,6 +57,7 @@ public class WorldValidation : MonoBehaviour
 	float[] cached_damping;
 	MirrorDebris[] cached_debris;
 	int[] cached_orbital_sign; // +1 or -1
+	bool ripple_fired = false;
 
 	public Phase CurrentPhase => current_phase;
 	public bool IsActive => current_phase != Phase.Idle && current_phase != Phase.Done;
@@ -95,6 +99,7 @@ public class WorldValidation : MonoBehaviour
 
 		current_phase = Phase.Attract;
 		phase_timer = 0f;
+		ripple_fired = false;
 
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyWorldValidation();
@@ -118,6 +123,8 @@ public class WorldValidation : MonoBehaviour
 			return;
 
 		phase_timer += Time.fixedDeltaTime;
+
+		MaybeFireRipple();
 
 		switch (current_phase)
 		{
@@ -151,6 +158,33 @@ public class WorldValidation : MonoBehaviour
 
 			if (SoundManager != null)
 				SoundManager.ResumeTypingLoopAfterEvent();
+
+			// Ripple is fired early via MaybeFireRipple() (RippleLeadTime before Done).
+			MaybeFireRipple();
+		}
+	}
+
+	void MaybeFireRipple()
+	{
+		if (ripple_fired || RippleEffect == null)
+			return;
+
+		// Elapsed time since the event started (Attract begins at 0).
+		float elapsed;
+		if (current_phase == Phase.Attract)
+			elapsed = phase_timer;
+		else
+			elapsed = AttractDuration + phase_timer; // Propel (or later)
+
+		float fire_at = (AttractDuration + PropelDelay) - RippleLeadTime;
+		if (elapsed >= fire_at)
+		{
+			ripple_fired = true;
+			RippleEffect.Play();
+
+			if (DebugLog)
+				Debug.Log("[world_validation] ripple fired | elapsed=" + elapsed.ToString("F2") +
+					" | fire_at=" + fire_at.ToString("F2"));
 		}
 	}
 

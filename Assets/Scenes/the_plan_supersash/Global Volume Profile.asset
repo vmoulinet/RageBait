@@ -116,6 +116,37 @@ MonoBehaviour:
   m_HighQualityFiltering:
     m_OverrideState: 0
     m_Value: 1
+--- !u!114 &-3532099029832660538
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b642f2927ba4840489db23d18022c539, type: 3}
+  m_Name: RippleDistortion
+  m_EditorClassIdentifier: Assembly-CSharp::RippleDistortion
+  active: 1
+  Center:
+    m_OverrideState: 0
+    m_Value: {x: 0.5, y: 0.5}
+  Radius:
+    m_OverrideState: 0
+    m_Value: 0
+  Width:
+    m_OverrideState: 0
+    m_Value: 0.1
+  Amplitude:
+    m_OverrideState: 1
+    m_Value: 0
+  Frequency:
+    m_OverrideState: 0
+    m_Value: 30
+  CorrectAspect:
+    m_OverrideState: 0
+    m_Value: 1
 --- !u!114 &-2106167925292903183
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -263,6 +294,7 @@ MonoBehaviour:
   - {fileID: -2106167925292903183}
   - {fileID: 3378981432423406022}
   - {fileID: 8806772498019856008}
+  - {fileID: -3532099029832660538}
 --- !u!114 &2013643282865687600
 MonoBehaviour:
   m_ObjectHideFlags: 3

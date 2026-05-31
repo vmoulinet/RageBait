@@ -3263,11 +3263,14 @@ MonoBehaviour:
   VideoManager: {fileID: 313604262}
   DaddyLetterProjector: {fileID: 272237673}
   SoundManager: {fileID: 633454979}
+  WorldValidation: {fileID: 919968336}
   EnableKeyboardDebugStomp: 1
   DebugStompKey: 101
   DebugLogEvents: 1
   StompTriggersVideo: 1
   TypingResumeTimeout: 30
+  StompTriggersWorldValidation: 1
+  WorldValidationDelay: 1
 --- !u!1 &800881236
 GameObject:
   m_ObjectHideFlags: 0
@@ -3816,6 +3819,7 @@ GameObject:
   m_Component:
   - component: {fileID: 878916773}
   - component: {fileID: 878916774}
+  - component: {fileID: 878916775}
   m_Layer: 0
   m_Name: Global Volume
   m_TagString: Untagged
@@ -3855,6 +3859,74 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: f7fa3e07b1b2dfa4cbd6107fe72a980f, type: 2}
+--- !u!114 &878916775
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 878916772}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510f139b00caade4cbe9214cc10edc6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RippleEffectController
+  Center: {x: 0.5, y: 0.615}
+  MaxRadius: 1.4
+  Duration: 4.8
+  Amplitude: 0.1
+  Width: 0.13
+  Frequency: 30
+  RadiusCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  AmplitudeCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  EnableKeyboardTrigger: 1
+  TriggerKey: 121
 --- !u!1 &879760364 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -1840227483577364681, guid: e1388c09f6adaad4e97769b8f31ac801,
@@ -4504,8 +4576,10 @@ MonoBehaviour:
   AttractCenter: {fileID: 1711083963}
   DaddyLetterProjector: {fileID: 272237673}
   SoundManager: {fileID: 633454979}
+  RippleEffect: {fileID: 878916775}
   AttractDuration: 6.94
   PropelDelay: 1.08
+  RippleLeadTime: 0.05
   AttractForce: 8.82
   AttractMaxSpeed: 23.2
   AttractDamping: 3
@@ -8548,8 +8622,8 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1865680348}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 18.740002}
-  m_LocalScale: {x: 14.877218, y: 8.368436, z: 9.298262}
+  m_LocalPosition: {x: 0, y: 0, z: 10.27}
+  m_LocalScale: {x: 7.688695, y: 4.3248916, z: 4.8054347}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 695650048}
@@ -8557,7 +8631,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -0.03999996}
+  m_AnchoredPosition: {x: 0, y: 0.049999952}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &1865680353

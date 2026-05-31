@@ -8,6 +8,7 @@ public class EventManager : MonoBehaviour
 	public VideoManager VideoManager;
 	public DaddyLetterProjector DaddyLetterProjector;
 	public SoundManager SoundManager;
+	public WorldValidation WorldValidation;
 
 	[Header("Debug")]
 	public bool EnableKeyboardDebugStomp = true;
@@ -17,6 +18,9 @@ public class EventManager : MonoBehaviour
 	[Header("Routing")]
 	public bool StompTriggersVideo = true;
 	public float TypingResumeTimeout = 30f;
+	[Tooltip("Trigger WorldValidation this many seconds after a stomp starts the video.")]
+	public bool StompTriggersWorldValidation = true;
+	public float WorldValidationDelay = 1f;
 
 	int stomp_count = 0;
 	float last_stomp_time = -999f;
@@ -120,6 +124,24 @@ public class EventManager : MonoBehaviour
 		}
 
 		VideoManager.Play_video_event();
+
+		Debug.Log("[event_manager] WV gate | enabled=" + StompTriggersWorldValidation +
+			" ref=" + (WorldValidation != null) + " activeEnabled=" + isActiveAndEnabled);
+
+		if (StompTriggersWorldValidation && WorldValidation != null && isActiveAndEnabled)
+			StartCoroutine(TriggerWorldValidationAfterDelay());
+	}
+
+	IEnumerator TriggerWorldValidationAfterDelay()
+	{
+		// Real-time wait so it tracks the video start, not Time.timeScale.
+		yield return new WaitForSecondsRealtime(WorldValidationDelay);
+
+		Debug.Log("[event_manager] WV delay elapsed -> Trigger() | IsActive=" + WorldValidation.IsActive);
+
+		// Trigger() self-guards via IsActive, so a TriangleSettled that already
+		// fired the event makes this a no-op.
+		WorldValidation.Trigger();
 	}
 
 	IEnumerator ResumeTypingWhenVideoEnds()
