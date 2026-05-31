@@ -8,7 +8,10 @@
       "Bash(powershell.exe -Command \"Get-ScheduledTask | Where-Object { $_TaskName -match ''shut|sleep|hibernate|power'' } | Select-Object TaskName, TaskPath, State | Format-List\")",
       "Bash(powershell.exe -File:*)",
       "Bash(python3 -c \":*)",
-      "Bash(dotnet --version)"
+      "Bash(dotnet --version)",
+      "Bash(git stash *)",
+      "Bash(find Assets/scripts -type d -name \"Editor\")",
+      "Bash(ls Assets/scripts)"
     ]
   }
 }

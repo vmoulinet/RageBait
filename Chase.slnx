@@ -4,8 +4,8 @@
   <Project Path="extOSC.csproj" />
   <Project Path="extOSC.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Samples.Runtime.csproj" />
-  <Project Path="Boxophobic.Utils.Scripts.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Boxophobic.Utils.Scripts.csproj" />
   <Project Path="Boxophobic.AtmosphericHeightFog.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Samples.Editor.csproj" />
   <Project Path="Unity.RenderPipelines.HighDefinition.Samples.Common.Runtime.csproj" />
