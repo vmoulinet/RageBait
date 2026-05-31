@@ -2760,6 +2760,9 @@ MonoBehaviour:
   TypingLoopSource: {fileID: 1666299928}
   TypingLoopClip: {fileID: 8300000, guid: 990f14c28664e41ab935f04d5769d43e, type: 3}
   TypingLoopVolume: 0.08
+  DaddyLoopSource: {fileID: 0}
+  DaddyLoopClip: {fileID: 8300000, guid: f47a5be7fee2426abc6593d8e3462c68, type: 3}
+  DaddyLoopVolume: 1
   DebugSound: 0
 --- !u!1 &645884743
 GameObject:

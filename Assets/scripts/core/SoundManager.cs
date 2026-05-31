@@ -26,6 +26,11 @@ public class SoundManager : MonoBehaviour
 	public AudioClip TypingLoopClip;
 	public float TypingLoopVolume = 1f;
 
+	[Header("Daddy Loves You Loop")]
+	public AudioSource DaddyLoopSource;
+	public AudioClip DaddyLoopClip;
+	public float DaddyLoopVolume = 1f;
+
 	[Header("Debug")]
 	public bool DebugSound = false;
 
@@ -98,6 +103,18 @@ public class SoundManager : MonoBehaviour
 
 		if (TypingLoopSource != null)
 			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
+
+		if (DaddyLoopSource == null)
+		{
+			DaddyLoopSource = Create_loop_source("daddy_loves_you_loop_audio_source", transform);
+			DaddyLoopSource.spatialBlend = 0f;
+		}
+
+		if (DaddyLoopSource != null && DaddyLoopClip != null)
+			DaddyLoopSource.clip = DaddyLoopClip;
+
+		if (DaddyLoopSource != null)
+			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
 	}
 
 	void Ensure_pendulum_arrays()
@@ -153,6 +170,10 @@ public class SoundManager : MonoBehaviour
 			Start_loop_if_needed(PendulumLoopSources[i], PendulumLoopClips[i]);
 
 		Start_loop_if_needed(TypingLoopSource, TypingLoopClip);
+
+		Start_loop_if_needed(DaddyLoopSource, DaddyLoopClip);
+		if (DaddyLoopSource != null)
+			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
 	}
 
 	void Start_loop_if_needed(AudioSource source, AudioClip clip)
@@ -250,6 +271,30 @@ public class SoundManager : MonoBehaviour
 		SetTypingLoopActive(normalized_amount > 0f);
 	}
 
+	public void SetDaddyLoopActive(bool active)
+	{
+		if (DaddyLoopSource == null)
+			return;
+
+		if (active)
+		{
+			if (DaddyLoopSource.clip == null && DaddyLoopClip != null)
+				DaddyLoopSource.clip = DaddyLoopClip;
+
+			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+
+			DaddyLoopSource.loop = true;
+
+			if (DaddyLoopSource.clip != null && !DaddyLoopSource.isPlaying)
+				DaddyLoopSource.Play();
+		}
+		else
+		{
+			if (DaddyLoopSource.isPlaying)
+				DaddyLoopSource.Stop();
+		}
+	}
+
 	void Keep_loops_alive()
 	{
 		if (PendulumLoopSources != null)
@@ -271,6 +316,15 @@ public class SoundManager : MonoBehaviour
 		{
 			TypingLoopSource.loop = true;
 			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
+		}
+
+		if (DaddyLoopSource != null && DaddyLoopSource.clip != null)
+		{
+			DaddyLoopSource.loop = true;
+			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+
+			if (!DaddyLoopSource.isPlaying)
+				DaddyLoopSource.Play();
 		}
 	}
 

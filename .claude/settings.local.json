@@ -15,7 +15,11 @@
       "Bash(rm -f \"Assets/scripts/Editor/FlattenChildScale.cs\" \"Assets/scripts/Editor/FlattenChildScale.cs.meta\")",
       "Bash(rmdir \"Assets/scripts/Editor\")",
       "Bash(rm -f \"Assets/scripts/Editor.meta\")",
-      "Bash(ls \"Assets/scripts/Editor\")"
+      "Bash(ls \"Assets/scripts/Editor\")",
+      "Bash(ffmpeg -i \"/c/Users/OmenHp/Downloads/daddy_loves_you_a.wav\")",
+      "Bash(ffmpeg -y -i \"/c/Users/OmenHp/Downloads/daddy_loves_you_a.wav\" -c:a libvorbis -qscale:a 5 \"/c/Users/OmenHp/Documents/GitHub/Chase/Assets/Audio/daddy_loves_you_a.ogg\")",
+      "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
+      "Bash(py -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")"
     ]
   }
 }

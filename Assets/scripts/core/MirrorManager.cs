@@ -24,6 +24,10 @@ public class MirrorManager : MonoBehaviour
 	[Header("Respawn")]
 	public float RespawnDelay = 1.0f;
 	public float RespawnRingSpacing = 0.75f;
+	[Tooltip("Decalage (s) entre deux respawns d'une meme rafale (ex: tous les miroirs casses avec R). " +
+		"Evite de respawner 9 miroirs dans la meme frame (pic de cout : reactivation des lumieres HDRP, " +
+		"RefreshTargets). A 0, comportement d'origine (tous en meme temps).")]
+	public float RespawnStagger = 0.06f;
 
 	[Header("Debris Limit")]
 	public int MaxDebrisCount = 25;
@@ -34,6 +38,11 @@ public class MirrorManager : MonoBehaviour
 
 	Vector3 cachedCenter;
 	int cachedCenterFrame = -1;
+
+	// Echelonnement des respawns : si plusieurs miroirs cassent dans la meme rafale (ex: R),
+	// on espace leurs respawns pour ne pas tout reactiver dans une seule frame.
+	int respawn_burst_count = 0;
+	int respawn_burst_frame = -1;
 
 	[HideInInspector] public readonly List<MirrorActor> ActiveMirrors = new List<MirrorActor>();
 
@@ -190,7 +199,7 @@ public class MirrorManager : MonoBehaviour
 
 		SpawnDebris(mirror, impactPoint);
 		ApplyBreakBoostToAll(mirror);
-		StartCoroutine(RespawnMirrorRoutine(mirror));
+		StartCoroutine(RespawnMirrorRoutine(mirror, NextRespawnStagger()));
 
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyMirrorBroken();
@@ -253,9 +262,23 @@ public class MirrorManager : MonoBehaviour
 		oldest_active.StartSinking();
 	}
 
-	IEnumerator RespawnMirrorRoutine(MirrorActor mirror)
+	// Renvoie le decalage a appliquer au prochain respawn pour etaler une rafale.
+	// Les miroirs casses dans la meme frame (ou des frames consecutives) recoivent un decalage
+	// croissant ; des qu'une frame passe sans nouveau bris, le compteur repart de zero.
+	float NextRespawnStagger()
 	{
-		yield return new WaitForSeconds(RespawnDelay);
+		if (Time.frameCount - respawn_burst_frame > 1)
+			respawn_burst_count = 0;
+
+		float stagger = respawn_burst_count * Mathf.Max(0f, RespawnStagger);
+		respawn_burst_count++;
+		respawn_burst_frame = Time.frameCount;
+		return stagger;
+	}
+
+	IEnumerator RespawnMirrorRoutine(MirrorActor mirror, float extraDelay)
+	{
+		yield return new WaitForSeconds(RespawnDelay + Mathf.Max(0f, extraDelay));
 
 		if (mirror == null)
 			yield break;
