@@ -16,6 +16,14 @@ public class VideoManager : MonoBehaviour
 	public CameraSineShake CameraShake;
 	public Transform DebrisFeedbackTarget;
 
+	[Header("Render Texture")]
+	[Tooltip("RenderTexture dans laquelle le VideoPlayer rend (TargetTexture). Assignee au runtime " +
+		"sur le materiau du quad pour fiabiliser la liaison en build (le shadergraph ne doit PAS " +
+		"hardcoder la RT : exposer une propriete texture nommee comme VideoTextureProperty).")]
+	public RenderTexture VideoRenderTexture;
+	[Tooltip("Nom de la propriete texture exposee par le shader additif du quad (ex: _VideoTex).")]
+	public string VideoTextureProperty = "_VideoTex";
+
 	[Header("Sources")]
 	public string VideosFolderRelative = "VIDEOS";
 	public string WordListRelative = "wordlist.txt";
@@ -200,7 +208,15 @@ public class VideoManager : MonoBehaviour
 			video_has_color_property = true;
 			video_color_property_name = "_Color";
 		}
-		if (video_material_instance.HasProperty("_BaseMap"))
+
+		// Propriete texture : on privilegie la propriete exposee par le shader additif
+		// (VideoTextureProperty, ex _VideoTex) puis les noms standard URP/Standard.
+		if (!string.IsNullOrEmpty(VideoTextureProperty) && video_material_instance.HasProperty(VideoTextureProperty))
+		{
+			video_has_texture_property = true;
+			video_texture_property_name = VideoTextureProperty;
+		}
+		else if (video_material_instance.HasProperty("_BaseMap"))
 		{
 			video_has_texture_property = true;
 			video_texture_property_name = "_BaseMap";
@@ -210,6 +226,29 @@ public class VideoManager : MonoBehaviour
 			video_has_texture_property = true;
 			video_texture_property_name = "_MainTex";
 		}
+
+		Bind_render_texture();
+	}
+
+	// Lie explicitement la RenderTexture au VideoPlayer et au materiau du quad. En
+	// build, ne pas compter sur une RT hardcodee dans le shadergraph (lecture d'une
+	// RT vide) : on assigne la meme RT vivante des deux cotes.
+	void Bind_render_texture()
+	{
+		if (VideoRenderTexture == null)
+			return;
+
+		if (!VideoRenderTexture.IsCreated())
+			VideoRenderTexture.Create();
+
+		if (VideoPlayer != null)
+		{
+			VideoPlayer.renderMode = VideoRenderMode.RenderTexture;
+			VideoPlayer.targetTexture = VideoRenderTexture;
+		}
+
+		if (video_material_instance != null && video_has_texture_property)
+			video_material_instance.SetTexture(video_texture_property_name, VideoRenderTexture);
 	}
 
 	void Set_video_alpha(float alpha)
@@ -229,6 +268,12 @@ public class VideoManager : MonoBehaviour
 		Ensure_video_material_instance();
 
 		if (!video_has_texture_property || video_material_instance == null)
+			return;
+
+		// Avec une RenderTexture dediee, on garde la RT liee en permanence (le
+		// VideoPlayer y ecrit) : la visibilite est geree par l'alpha + renderer.enabled.
+		// On ne met PAS la texture a null, sinon le quad redevient blanc en build.
+		if (VideoRenderTexture != null)
 			return;
 
 		video_material_instance.SetTexture(video_texture_property_name, null);

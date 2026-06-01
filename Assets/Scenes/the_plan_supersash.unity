@@ -1798,6 +1798,8 @@ MonoBehaviour:
   SubtitleText: {fileID: 0}
   CameraShake: {fileID: 1823688470}
   DebrisFeedbackTarget: {fileID: 749481879}
+  VideoRenderTexture: {fileID: 8400000, guid: 67eddd9168be97c45949af3d46ca3c85, type: 2}
+  VideoTextureProperty: _VideoTex
   VideosFolderRelative: VIDEOS
   WordListRelative: 
   PrepareOnAwake: 1
