@@ -14,6 +14,7 @@ public class MirrorManager : MonoBehaviour
 	public WordManager WordManager;
 	public SoundManager SoundManager;
 	public DaddyLetterProjector DaddyLetterProjector;
+	public MirrorMeltdown MirrorMeltdown;
 
 	[Header("Counts")]
 	public int StartingMirrorCount = 6;
@@ -45,6 +46,10 @@ public class MirrorManager : MonoBehaviour
 	int respawn_burst_frame = -1;
 
 	[HideInInspector] public readonly List<MirrorActor> ActiveMirrors = new List<MirrorActor>();
+
+	// Quand true, les respawns en attente sont geles (cf. MirrorMeltdown).
+	// Des qu'il repasse a false, les miroirs en attente respawnent.
+	[HideInInspector] public bool SuspendRespawn = false;
 
 	public void Initialize(SimulationManager sim)
 	{
@@ -186,10 +191,15 @@ public class MirrorManager : MonoBehaviour
 		return new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
 	}
 
-	public void OnMirrorBroken(MirrorActor mirror, Vector3 impactPoint)
+	public void OnMirrorBroken(MirrorActor mirror, Vector3 impactPoint, bool brokenByPendulum = false)
 	{
 		if (mirror == null)
 			return;
+
+		// Un crash par le pendule signifie que le jeu se passe activement :
+		// on remet a zero le timer de meltdown (cf. MirrorMeltdown).
+		if (brokenByPendulum && MirrorMeltdown != null)
+			MirrorMeltdown.ResetTimer();
 
 		if (mirror.CurrentSpawnPoint != null && mirror.CurrentSpawnPoint.CurrentMirror == mirror)
 			mirror.CurrentSpawnPoint.CurrentMirror = null;
@@ -279,6 +289,10 @@ public class MirrorManager : MonoBehaviour
 	IEnumerator RespawnMirrorRoutine(MirrorActor mirror, float extraDelay)
 	{
 		yield return new WaitForSeconds(RespawnDelay + Mathf.Max(0f, extraDelay));
+
+		// Tant que le respawn est suspendu (meltdown en cours), on attend.
+		while (SuspendRespawn)
+			yield return null;
 
 		if (mirror == null)
 			yield break;

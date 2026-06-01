@@ -176,6 +176,9 @@ public class MirrorDebris : MonoBehaviour
 		else
 			horizontal_dir = Vector3.zero;
 
+		// Bris "explosion en l'air" (MirrorMeltdown) : poussee verticale supplementaire.
+		float explode_upward = source_actor != null ? source_actor.ExplodeUpwardBoost : 0f;
+
 		for (int i = 0; i < cached_bodies.Length; i++)
 		{
 			Rigidbody body = cached_bodies[i];
@@ -183,7 +186,7 @@ public class MirrorDebris : MonoBehaviour
 				continue;
 
 			float force = ImpactForce + Random.Range(-ImpactForceRandom, ImpactForceRandom);
-			float upward = ImpactUpwardForce + Random.Range(-ImpactUpwardForceRandom, ImpactUpwardForceRandom);
+			float upward = ImpactUpwardForce + explode_upward + Random.Range(-ImpactUpwardForceRandom, ImpactUpwardForceRandom);
 			float torque = ImpactTorque + Random.Range(-ImpactTorqueRandom, ImpactTorqueRandom);
 
 			Vector3 impulse = horizontal_dir * force + Vector3.up * upward;

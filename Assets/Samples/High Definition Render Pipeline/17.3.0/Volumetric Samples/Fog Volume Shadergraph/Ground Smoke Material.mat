@@ -97,7 +97,7 @@ Material:
     - _SrcBlend: 1
     - _SurfaceType: 0
     - _TIling: 1
-    - _Tiling: 0.22
+    - _Tiling: 0.19
     - _TransparentBackfaceEnable: 0
     - _TransparentCullMode: 2
     - _TransparentDepthPostpassEnable: 0

@@ -78,6 +78,16 @@ public class ChoreographyManager : MonoBehaviour
 
 	[HideInInspector] public Vector3 Center;
 
+	// Vrai uniquement quand on est en mode Triangle ET que la formation est stable.
+	// Sert au MirrorMeltdown : tant que c'est faux en mode Triangle, les miroirs
+	// "ne sont pas positionnes" et le timer de meltdown tourne.
+	public bool IsTriangleCurrentlyStable { get; private set; }
+
+	// Quand true, l'auto-cycle (transitions de pattern, settle, etc.) est gele.
+	// Utilise par le MirrorMeltdown pour eviter d'ecraser les facing overrides
+	// et le gel des miroirs pendant la sequence.
+	[HideInInspector] public bool SuspendAutoCycle = false;
+
 	public enum CirclePhase
 	{
 		Move,
@@ -144,7 +154,9 @@ public class ChoreographyManager : MonoBehaviour
 			return;
 
 		HandleDebugStateKeys();
-		UpdateAutoCycle();
+
+		if (!SuspendAutoCycle)
+			UpdateAutoCycle();
 
 		UpdateTriangleDebugLines();
 
@@ -367,12 +379,15 @@ public class ChoreographyManager : MonoBehaviour
 			return;
 		}
 
+		// Hors mode Triangle, les miroirs ne sont pas en formation "positionnee".
+		IsTriangleCurrentlyStable = false;
 		UpdateRandomPatternAutoCycle();
 	}
 
 	void UpdateTriangleAutoCycle()
 	{
 		bool is_stable = IsTriangleStable();
+		IsTriangleCurrentlyStable = is_stable;
 
 		if (daddyGazeActive)
 		{

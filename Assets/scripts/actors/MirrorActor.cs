@@ -72,6 +72,7 @@ public class MirrorActor : MonoBehaviour
 	Vector3 facing_override_direction = Vector3.forward;
 	float panel_x_target = 0f;
 	float panel_x_current = 0f;
+	bool panel_x_override_active = false;
 	Quaternion panel_base_local_rotation = Quaternion.identity;
 	bool panel_base_rotation_cached = false;
 	Rigidbody rb;
@@ -85,6 +86,9 @@ public class MirrorActor : MonoBehaviour
 	float speed_boost_timer = 0f;
 	float speed_boost_initial_multiplier = 1f;
 	float speed_boost_duration = 0f;
+	float explode_upward_boost = 0f;
+	bool broken_by_pendulum = false;
+	bool movement_frozen = false;
 
 	public bool IsBroken
 	{
@@ -157,6 +161,16 @@ public class MirrorActor : MonoBehaviour
 		get
 		{
 			return panel_x_current;
+		}
+	}
+
+	// Boost vertical applique aux debris lors d'un bris "explosion en l'air"
+	// (cf. MirrorMeltdown). 0 = bris normal.
+	public float ExplodeUpwardBoost
+	{
+		get
+		{
+			return explode_upward_boost;
 		}
 	}
 
@@ -242,6 +256,20 @@ public class MirrorActor : MonoBehaviour
 
 		rb.mass = Mathf.Max(0.01f, Mass);
 		rb.useGravity = UseGravity;
+
+		// Meltdown : miroir fige sur place mais continue de pivoter (vers la camera).
+		if (movement_frozen)
+		{
+			Vector3 frozen_velocity = rb.linearVelocity;
+			frozen_velocity.x = 0f;
+			frozen_velocity.z = 0f;
+			rb.linearVelocity = frozen_velocity;
+			last_desired_planar_velocity = Vector3.zero;
+			smoothed_desired_planar_velocity = Vector3.zero;
+			ApplyGrounding();
+			UpdateBodyRotation();
+			return;
+		}
 
 		if (speed_boost_timer > 0f)
 		{
@@ -587,6 +615,13 @@ public class MirrorActor : MonoBehaviour
 		facing_override_active = false;
 	}
 
+	// Fige le deplacement planaire du miroir (il continue de pivoter). Utilise par
+	// le meltdown pour immobiliser les miroirs avant qu'ils ne regardent la camera.
+	public void SetMovementFrozen(bool frozen)
+	{
+		movement_frozen = frozen;
+	}
+
 	void UpdateBodyRotation()
 	{
 		if (rb == null)
@@ -637,6 +672,11 @@ public class MirrorActor : MonoBehaviour
 		if (PanelSpin)
 		{
 			panel_x_current += PanelSpinSpeed * Time.deltaTime;
+		}
+		else if (panel_x_override_active)
+		{
+			// Target pilote de l'exterieur (ex: meltdown), pas de tilt vitesse.
+			panel_x_current = Mathf.MoveTowards(panel_x_current, panel_x_target, PanelXSpeed * Time.deltaTime);
 		}
 		else
 		{
@@ -704,6 +744,10 @@ public class MirrorActor : MonoBehaviour
 		CurrentSpawnPoint.CurrentMirror = this;
 
 		is_broken = false;
+		// Un miroir fraichement respawne ne doit pas heriter d'un override
+		// d'orientation ni d'un gel d'une vie precedente (ex: meltdown).
+		facing_override_active = false;
+		movement_frozen = false;
 
 		Vector3 spawn_position = spawn_point.transform.position;
 		Quaternion spawn_rotation = spawn_point.transform.rotation;
@@ -737,9 +781,12 @@ public class MirrorActor : MonoBehaviour
 		last_break_impact_velocity = Vector3.zero;
 		last_break_impact_direction = Vector3.zero;
 		last_break_impact_speed = 0f;
+		explode_upward_boost = 0f;
+		broken_by_pendulum = false;
 		CachePanelBaseRotation();
 		panel_x_target = 0f;
 		panel_x_current = 0f;
+		panel_x_override_active = false;
 		PanelSpin = false;
 		ApplyPanelPoseImmediate();
 
@@ -771,6 +818,39 @@ public class MirrorActor : MonoBehaviour
 	{
 		panel_x_target = angle_degrees;
 		PanelSpin = false;
+	}
+
+	// Active un controle externe du panneau X : le target n'est plus recalcule a
+	// partir de la vitesse, il faut le piloter via SetPanelXOverrideTarget.
+	public void SetPanelXOverride(bool active)
+	{
+		panel_x_override_active = active;
+		if (active)
+			PanelSpin = false;
+	}
+
+	public void SetPanelXOverrideTarget(float angle_degrees)
+	{
+		panel_x_target = angle_degrees;
+		panel_x_override_active = true;
+		PanelSpin = false;
+	}
+
+	// Pose immediatement l'angle du panneau (current ET target) sous controle
+	// externe. Permet a l'appelant de gerer lui-meme le timing de l'animation.
+	public void SetPanelXValue(float angle_degrees)
+	{
+		panel_x_override_active = true;
+		PanelSpin = false;
+		panel_x_target = angle_degrees;
+		panel_x_current = angle_degrees;
+		ApplyPanelPoseImmediate();
+	}
+
+	// Vrai quand le panneau a atteint (a tolerance pres) le dernier target demande.
+	public bool IsPanelXAtTarget(float tolerance_degrees = 0.5f)
+	{
+		return Mathf.Abs(Mathf.DeltaAngle(panel_x_current, panel_x_target)) <= tolerance_degrees;
 	}
 
 	public void TriggerPanelBeat(float angle_degrees)
@@ -908,6 +988,8 @@ public class MirrorActor : MonoBehaviour
 		if (is_broken || !other.CompareTag(PendulumTag))
 			return;
 
+		broken_by_pendulum = true;
+
 		PendulumManager pendulum = other.GetComponentInParent<PendulumManager>();
 		if (pendulum != null)
 		{
@@ -949,6 +1031,23 @@ public class MirrorActor : MonoBehaviour
 		last_break_impact_velocity = Vector3.zero;
 		last_break_impact_direction = Vector3.down;
 		last_break_impact_speed = 0f;
+		explode_upward_boost = 0f;
+		broken_by_pendulum = false;
+		Break(WorldPosition);
+	}
+
+	// Casse le miroir en projetant ses debris vers le haut (explosion en l'air).
+	// upwardBoost s'ajoute a la poussee verticale de base des debris.
+	public void ForceBreakUpward(float upwardBoost)
+	{
+		if (is_broken)
+			return;
+
+		last_break_impact_velocity = Vector3.zero;
+		last_break_impact_direction = Vector3.zero;
+		last_break_impact_speed = 0f;
+		explode_upward_boost = Mathf.Max(0f, upwardBoost);
+		broken_by_pendulum = false;
 		Break(WorldPosition);
 	}
 
@@ -977,7 +1076,7 @@ public class MirrorActor : MonoBehaviour
 		}
 
 		if (MirrorManager != null)
-			MirrorManager.OnMirrorBroken(this, impact_point);
+			MirrorManager.OnMirrorBroken(this, impact_point, broken_by_pendulum);
 
 		gameObject.SetActive(false);
 	}
