@@ -19,8 +19,6 @@ public class MirrorMeltdown : MonoBehaviour
 	[Header("References")]
 	public ChoreographyManager ChoreographyManager;
 	public MirrorManager MirrorManager;
-	[Tooltip("Cible vers laquelle les miroirs orientent leur face reflechissante. Fallback: Camera.main.")]
-	public Transform CameraTarget;
 	[Tooltip("GameObject parent des Spotlight a faire dim out (toutes ses Light enfants).")]
 	public Transform SpotlightsRoot;
 	[Tooltip("Global Volume contenant le HDRI Sky dont on pilote l'exposure.")]
@@ -150,15 +148,15 @@ public class MirrorMeltdown : MonoBehaviour
 		if (ChoreographyManager != null)
 			ChoreographyManager.SuspendAutoCycle = true;
 
-		// 2. Immobiliser les miroirs puis les tourner vers la camera (face
-		//    reflechissante). On laisse FaceDuration pour qu'ils pivotent.
+		// 2. Immobiliser les miroirs puis orienter leur face reflechissante vers +Z.
+		//    On laisse FaceDuration pour qu'ils pivotent.
 		FreezeMirrors(targets);
-		FaceMirrorsToCamera(targets);
+		FaceMirrorsTowardZ(targets);
 		if (FaceDuration > 0f)
 			yield return new WaitForSeconds(FaceDuration);
 
 		// 2b. Bascule du panneau X : en arriere (PanelTiltBackward) puis en avant
-		//     (PanelTiltForward), pendant qu'ils attendent face camera.
+		//     (PanelTiltForward), pendant qu'ils attendent.
 		yield return StartCoroutine(TiltPanels(targets));
 
 		// 3. Preparer puis fondre les Spotlight et l'exposure vers 0.
@@ -260,26 +258,17 @@ public class MirrorMeltdown : MonoBehaviour
 		}
 	}
 
-	void FaceMirrorsToCamera(List<MirrorActor> targets)
+	void FaceMirrorsTowardZ(List<MirrorActor> targets)
 	{
-		Transform target = CameraTarget != null ? CameraTarget : (Camera.main != null ? Camera.main.transform : null);
-		if (target == null)
-			return;
-
 		for (int i = 0; i < targets.Count; i++)
 		{
 			MirrorActor mirror = targets[i];
 			if (mirror == null || mirror.IsBroken)
 				continue;
 
-			Vector3 to_camera = target.position - mirror.WorldPosition;
-			to_camera.y = 0f;
-			if (to_camera.sqrMagnitude < 0.0001f)
-				continue;
-
-			// Face reflechissante vers la camera : meme convention que
-			// FaceAllMirrorsToDaddy (oriente l'oppose du forward vers la cible).
-			mirror.SetFacingOverride(-to_camera.normalized);
+			// On veut que la face reflechissante regarde +Z. SetFacingOverride oriente
+			// le forward ; pour ce rig, forward = +Z place la face reflechissante vers +Z.
+			mirror.SetFacingOverride(Vector3.forward);
 		}
 	}
 

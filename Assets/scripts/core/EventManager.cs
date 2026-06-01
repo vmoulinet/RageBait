@@ -9,6 +9,7 @@ public class EventManager : MonoBehaviour
 	public DaddyLetterProjector DaddyLetterProjector;
 	public SoundManager SoundManager;
 	public WorldValidation WorldValidation;
+	public StompWordStrobe StompWordStrobe;
 
 	[Header("Debug")]
 	public bool EnableKeyboardDebugStomp = true;
@@ -93,8 +94,15 @@ public class EventManager : MonoBehaviour
 			);
 		}
 
+		// Un stomp = le jeu se passe activement : on repousse le meltdown.
+		if (SimulationManager != null && SimulationManager.MirrorManager != null)
+			SimulationManager.MirrorManager.ResetMeltdownTimer();
+
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyStomp();
+
+		if (StompWordStrobe != null)
+			StompWordStrobe.Trigger();
 
 		RouteDefaultStompResponse(stomp_force, source);
 	}

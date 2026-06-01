@@ -110,6 +110,10 @@ public class WorldValidation : MonoBehaviour
 		phase_timer = 0f;
 		ripple_fired = false;
 
+		// Une WorldValidation = le jeu se passe activement : on repousse le meltdown.
+		if (MirrorManager != null)
+			MirrorManager.ResetMeltdownTimer();
+
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyWorldValidation();
 

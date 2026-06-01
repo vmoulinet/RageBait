@@ -78,3 +78,7 @@ Assets/Fonts/InstrumentSerif-Regular SDF.asset
 Assets/.DS_Store
 .DS_Store
 */.DS_Store
+
+# Fichiers de backup (ex: video re-encodee, sauvegarde locale)
+*.bak
+*.bak.meta

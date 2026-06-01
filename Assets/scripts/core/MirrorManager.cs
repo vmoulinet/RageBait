@@ -107,6 +107,14 @@ public class MirrorManager : MonoBehaviour
 		}
 	}
 
+	// Remet le compteur du meltdown a zero (le jeu se passe activement). Appele
+	// notamment sur stomp et WorldValidation, en plus du crash par pendule.
+	public void ResetMeltdownTimer()
+	{
+		if (MirrorMeltdown != null)
+			MirrorMeltdown.ResetTimer();
+	}
+
 	public void BootstrapMirrors()
 	{
 		if (MirrorPrefab == null)
