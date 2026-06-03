@@ -67,6 +67,12 @@ public class ChoreographyManager : MonoBehaviour
 	public float CircleOrbitSpeed = 60f;
 	public float CircleMirrorSpeed = 3f;
 	public float CircleHoldDuration = 1f;
+	public float CirclePanelRotateAngle = 45f;
+	public float CirclePanelRotateSpeed = 180f;
+	public float CircleOrbitSpeedMultiplier = 2f;
+	public float CircleAccelerationDuration = 3f;
+	public float CircleSpinSpeedMin = 45f;
+	public float CircleSpinSpeedMax = 1800f;
 
 	[Header("Chaos")]
 	public float ChaosStrength = 1.5f;
@@ -96,13 +102,16 @@ public class ChoreographyManager : MonoBehaviour
 		TurnRight,
 		QuarterOrbit,
 		QuarterOrbitWait,
-		FaceAnchor,
-		SplitMove,
-		SplitWait,
-		DualTurn,
-		DualOrbit,
-		Regroup,
-		FaceOutward,
+		PanelRotate45_A,
+		Orbit180CW,
+		PauseAfterOrbit180,
+		PanelRotate45_B,
+		Orbit270CCW,
+		PauseAfterOrbit270,
+		PanelRotate45_A_Again,
+		Orbit360CW,
+		PauseBeforeFinal,
+		PanelAccelerate,
 		Done
 	}
 
@@ -123,6 +132,7 @@ public class ChoreographyManager : MonoBehaviour
 	readonly List<MirrorActor> circleOuterActors = new List<MirrorActor>();
 	float circleOrbitAccumulated;
 	float circleQuarterOrbitAccumulated;
+	float circleSpinSpeedCurrent = 0f;
 	float triangleStableTimer;
 	float activePatternTimer;
 	float activePatternDuration;
@@ -959,6 +969,7 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 		activePatternTimer = 0f;
 		circleOrbitAccumulated = 0f;
 		circleQuarterOrbitAccumulated = 0f;
+		circleSpinSpeedCurrent = CircleSpinSpeedMin;
 		circleActorAngles.Clear();
 		circleInnerActors.Clear();
 		circleOuterActors.Clear();
@@ -1019,6 +1030,8 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 		{
 			actors[i].ClearFacingOverride();
 			actors[i].ClearSpeedOverride();
+			actors[i].SetPanelSpin(false);
+			actors[i].SetPanelXOverride(false);
 		}
 
 		circleActorAngles.Clear();
@@ -1062,26 +1075,35 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 			case CirclePhase.QuarterOrbitWait:
 				UpdateCircleQuarterOrbitWait();
 				break;
-			case CirclePhase.FaceAnchor:
-				UpdateCircleFaceAnchor();
+			case CirclePhase.PanelRotate45_A:
+				UpdateCirclePanelRotate45_A();
 				break;
-			case CirclePhase.SplitMove:
-				UpdateCircleSplitMove();
+			case CirclePhase.Orbit180CW:
+				UpdateCircleOrbit180CW();
 				break;
-			case CirclePhase.SplitWait:
-				UpdateCircleSplitWait();
+			case CirclePhase.PauseAfterOrbit180:
+				UpdateCirclePauseAfterOrbit180();
 				break;
-			case CirclePhase.DualTurn:
-				UpdateCircleDualTurn();
+			case CirclePhase.PanelRotate45_B:
+				UpdateCirclePanelRotate45_B();
 				break;
-			case CirclePhase.DualOrbit:
-				UpdateCircleDualOrbit();
+			case CirclePhase.Orbit270CCW:
+				UpdateCircleOrbit270CCW();
 				break;
-			case CirclePhase.Regroup:
-				UpdateCircleRegroup();
+			case CirclePhase.PauseAfterOrbit270:
+				UpdateCirclePauseAfterOrbit270();
 				break;
-			case CirclePhase.FaceOutward:
-				UpdateCircleFaceOutward();
+			case CirclePhase.PanelRotate45_A_Again:
+				UpdateCirclePanelRotate45_A_Again();
+				break;
+			case CirclePhase.Orbit360CW:
+				UpdateCircleOrbit360CW();
+				break;
+			case CirclePhase.PauseBeforeFinal:
+				UpdateCirclePauseBeforeFinal();
+				break;
+			case CirclePhase.PanelAccelerate:
+				UpdateCirclePanelAccelerate();
 				break;
 			case CirclePhase.Done:
 				StopCircle();
@@ -1179,186 +1201,231 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 	{
 		if (circlePhaseTimer >= CircleHoldDuration)
 		{
-			// Face anchor
-			List<MirrorActor> actors = GetActiveActors();
-			Vector3 anchor = GetResolvedAnchorPoint();
-			for (int i = 0; i < actors.Count; i++)
-			{
-				Vector3 toAnchor = anchor - actors[i].WorldPosition;
-				toAnchor.y = 0f;
-				if (toAnchor.sqrMagnitude > 0.0001f)
-					actors[i].SetFacingOverride(toAnchor.normalized);
-			}
-			SetCirclePhase(CirclePhase.FaceAnchor);
-		}
-	}
-
-	// 4d. Face anchor, hold 1s
-	void UpdateCircleFaceAnchor()
-	{
-		if (circlePhaseTimer >= CircleHoldDuration)
-		{
-			// Split: every other actor goes to midpoint
-			List<MirrorActor> actors = GetActiveActors();
-			Vector3 anchor = GetResolvedAnchorPoint();
-
-			circleInnerActors.Clear();
-			circleOuterActors.Clear();
-
-			for (int i = 0; i < actors.Count; i++)
-			{
-				if (i % 2 == 1)
-					circleInnerActors.Add(actors[i]);
-				else
-					circleOuterActors.Add(actors[i]);
-			}
-
-			// Set inner targets to midpoint
-			for (int i = 0; i < circleInnerActors.Count; i++)
-			{
-				if (!circleActorAngles.ContainsKey(circleInnerActors[i]))
-					continue;
-
-				float angle = circleActorAngles[circleInnerActors[i]] * Mathf.Deg2Rad;
-				circleInnerActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (CircleRadius * 0.5f);
-			}
-
-			// Clear facing so they follow movement
-			for (int i = 0; i < actors.Count; i++)
-				actors[i].ClearFacingOverride();
-
-			SetCirclePhase(CirclePhase.SplitMove);
-		}
-	}
-
-	// 5a. Inner mirrors move to midpoint
-	void UpdateCircleSplitMove()
-	{
-		if (AllAtTargets())
-			SetCirclePhase(CirclePhase.SplitWait);
-	}
-
-	// 5b. Stop 1s
-	void UpdateCircleSplitWait()
-	{
-		if (circlePhaseTimer >= CircleHoldDuration)
-		{
-			// Inner: 90° left. Outer: 90° right.
-			Vector3 anchor = GetResolvedAnchorPoint();
-
-			for (int i = 0; i < circleInnerActors.Count; i++)
-			{
-				Vector3 toAnchor = anchor - circleInnerActors[i].WorldPosition;
-				toAnchor.y = 0f;
-				if (toAnchor.sqrMagnitude > 0.0001f)
-				{
-					Vector3 left = Quaternion.AngleAxis(-90f, Vector3.up) * toAnchor.normalized;
-					circleInnerActors[i].SetFacingOverride(left);
-				}
-			}
-
-			for (int i = 0; i < circleOuterActors.Count; i++)
-			{
-				Vector3 toAnchor = anchor - circleOuterActors[i].WorldPosition;
-				toAnchor.y = 0f;
-				if (toAnchor.sqrMagnitude > 0.0001f)
-				{
-					Vector3 right = Quaternion.AngleAxis(90f, Vector3.up) * toAnchor.normalized;
-					circleOuterActors[i].SetFacingOverride(right);
-				}
-			}
-
-			SetCirclePhase(CirclePhase.DualTurn);
-		}
-	}
-
-	// 6a. Hold turn 1s then start dual orbit
-	void UpdateCircleDualTurn()
-	{
-		if (circlePhaseTimer >= CircleHoldDuration)
-		{
-			// Clear facing — follow movement
 			List<MirrorActor> actors = GetActiveActors();
 			for (int i = 0; i < actors.Count; i++)
 				actors[i].ClearFacingOverride();
 
+			SetCirclePhase(CirclePhase.PanelRotate45_A);
+		}
+	}
+
+	// 5. Panel rotate 45° forward, then orbit 180° CW at 2x speed
+	void UpdateCirclePanelRotate45_A()
+	{
+		List<MirrorActor> actors = GetActiveActors();
+		float panelAnimationDuration = CirclePanelRotateAngle / CirclePanelRotateSpeed;
+		float totalDuration = panelAnimationDuration * 2f; // Go to 45° and back to 0°
+
+		if (circlePhaseTimer < panelAnimationDuration)
+		{
+			// Phase 1: Rotate to 45°
+			if (circlePhaseTimer == 0f)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(CirclePanelRotateAngle);
+			}
+		}
+		else if (circlePhaseTimer < totalDuration)
+		{
+			// Phase 2: Rotate back to 0°
+			if (circlePhaseTimer == panelAnimationDuration)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(0f);
+			}
+		}
+		else
+		{
+			// Panel animation complete, start orbit
 			circleOrbitAccumulated = 0f;
-			SetCirclePhase(CirclePhase.DualOrbit);
+			SetCirclePhase(CirclePhase.Orbit180CW);
 		}
 	}
 
-	// 6b. Inner CW, outer CCW, same duration (speed adapts to radius)
-	void UpdateCircleDualOrbit()
+	void UpdateCircleOrbit180CW()
 	{
-		float step = CircleOrbitSpeed * Time.deltaTime;
+		float step = CircleOrbitSpeed * CircleOrbitSpeedMultiplier * Time.deltaTime;
 		circleOrbitAccumulated += step;
 
 		Vector3 anchor = GetResolvedAnchorPoint();
+		List<MirrorActor> actors = GetActiveActors();
 
-		// Inner actors: CW (negative angle), at half radius
-		for (int i = 0; i < circleInnerActors.Count; i++)
+		for (int i = 0; i < actors.Count; i++)
 		{
-			if (!circleActorAngles.ContainsKey(circleInnerActors[i]))
+			if (!circleActorAngles.ContainsKey(actors[i]))
 				continue;
 
-			circleActorAngles[circleInnerActors[i]] -= step;
-			float angle = circleActorAngles[circleInnerActors[i]] * Mathf.Deg2Rad;
-			float radius = CircleRadius * 0.5f;
-			circleInnerActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * radius;
+			circleActorAngles[actors[i]] -= step; // CW = decrease angle
+			float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
+			actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
 		}
 
-		// Outer actors: CCW (positive angle), at full radius
-		for (int i = 0; i < circleOuterActors.Count; i++)
+		if (circleOrbitAccumulated >= 180f)
+			SetCirclePhase(CirclePhase.PauseAfterOrbit180);
+	}
+
+	void UpdateCirclePauseAfterOrbit180()
+	{
+		if (circlePhaseTimer >= CircleHoldDuration)
+			SetCirclePhase(CirclePhase.PanelRotate45_B);
+	}
+
+	// 6. Panel rotate 45° backward, then orbit 270° CCW at 2x speed
+	void UpdateCirclePanelRotate45_B()
+	{
+		List<MirrorActor> actors = GetActiveActors();
+		float panelAnimationDuration = CirclePanelRotateAngle / CirclePanelRotateSpeed;
+		float totalDuration = panelAnimationDuration * 2f;
+
+		if (circlePhaseTimer < panelAnimationDuration)
 		{
-			if (!circleActorAngles.ContainsKey(circleOuterActors[i]))
+			// Phase 1: Rotate to -45°
+			if (circlePhaseTimer == 0f)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(-CirclePanelRotateAngle);
+			}
+		}
+		else if (circlePhaseTimer < totalDuration)
+		{
+			// Phase 2: Rotate back to 0°
+			if (circlePhaseTimer == panelAnimationDuration)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(0f);
+			}
+		}
+		else
+		{
+			// Panel animation complete, start orbit
+			circleOrbitAccumulated = 0f;
+			SetCirclePhase(CirclePhase.Orbit270CCW);
+		}
+	}
+
+	void UpdateCircleOrbit270CCW()
+	{
+		float step = CircleOrbitSpeed * CircleOrbitSpeedMultiplier * Time.deltaTime;
+		circleOrbitAccumulated += step;
+
+		Vector3 anchor = GetResolvedAnchorPoint();
+		List<MirrorActor> actors = GetActiveActors();
+
+		for (int i = 0; i < actors.Count; i++)
+		{
+			if (!circleActorAngles.ContainsKey(actors[i]))
 				continue;
 
-			circleActorAngles[circleOuterActors[i]] += step;
-			float angle = circleActorAngles[circleOuterActors[i]] * Mathf.Deg2Rad;
-			circleOuterActors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
+			circleActorAngles[actors[i]] += step; // CCW = increase angle
+			float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
+			actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
+		}
+
+		if (circleOrbitAccumulated >= 270f)
+			SetCirclePhase(CirclePhase.PauseAfterOrbit270);
+	}
+
+	void UpdateCirclePauseAfterOrbit270()
+	{
+		if (circlePhaseTimer >= CircleHoldDuration)
+			SetCirclePhase(CirclePhase.PanelRotate45_A_Again);
+	}
+
+	// 7. Panel rotate 45° forward (same as first), then orbit 360° CW at 2x speed
+	void UpdateCirclePanelRotate45_A_Again()
+	{
+		List<MirrorActor> actors = GetActiveActors();
+		float panelAnimationDuration = CirclePanelRotateAngle / CirclePanelRotateSpeed;
+		float totalDuration = panelAnimationDuration * 2f;
+
+		if (circlePhaseTimer < panelAnimationDuration)
+		{
+			// Phase 1: Rotate to 45°
+			if (circlePhaseTimer == 0f)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(CirclePanelRotateAngle);
+			}
+		}
+		else if (circlePhaseTimer < totalDuration)
+		{
+			// Phase 2: Rotate back to 0°
+			if (circlePhaseTimer == panelAnimationDuration)
+			{
+				for (int i = 0; i < actors.Count; i++)
+					actors[i].SetPanelXOverrideTarget(0f);
+			}
+		}
+		else
+		{
+			// Panel animation complete, start orbit
+			circleOrbitAccumulated = 0f;
+			SetCirclePhase(CirclePhase.Orbit360CW);
+		}
+	}
+
+	void UpdateCircleOrbit360CW()
+	{
+		float step = CircleOrbitSpeed * CircleOrbitSpeedMultiplier * Time.deltaTime;
+		circleOrbitAccumulated += step;
+
+		Vector3 anchor = GetResolvedAnchorPoint();
+		List<MirrorActor> actors = GetActiveActors();
+
+		for (int i = 0; i < actors.Count; i++)
+		{
+			if (!circleActorAngles.ContainsKey(actors[i]))
+				continue;
+
+			circleActorAngles[actors[i]] -= step; // CW = decrease angle
+			float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
+			actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
 		}
 
 		if (circleOrbitAccumulated >= 360f)
-		{
-			// Regroup: all back to outer circle
-			List<MirrorActor> actors = GetActiveActors();
-			for (int i = 0; i < actors.Count; i++)
-			{
-				if (!circleActorAngles.ContainsKey(actors[i]))
-					continue;
-
-				float angle = circleActorAngles[actors[i]] * Mathf.Deg2Rad;
-				actors[i].CircleTarget = anchor + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * CircleRadius;
-			}
-
-			SetCirclePhase(CirclePhase.Regroup);
-		}
+			SetCirclePhase(CirclePhase.PauseBeforeFinal);
 	}
 
-	// 7. All back to outer circle
-	void UpdateCircleRegroup()
-	{
-		if (AllAtTargets())
-		{
-			// Face away from anchor
-			Vector3 anchor = GetResolvedAnchorPoint();
-			List<MirrorActor> actors = GetActiveActors();
-			for (int i = 0; i < actors.Count; i++)
-			{
-				Vector3 away = actors[i].WorldPosition - anchor;
-				away.y = 0f;
-				if (away.sqrMagnitude > 0.0001f)
-					actors[i].SetFacingOverride(away.normalized);
-			}
-			SetCirclePhase(CirclePhase.FaceOutward);
-		}
-	}
-
-	// 8. Face outward, hold 1s, done
-	void UpdateCircleFaceOutward()
+	void UpdateCirclePauseBeforeFinal()
 	{
 		if (circlePhaseTimer >= CircleHoldDuration)
+		{
+			// Start panel acceleration
+			circleSpinSpeedCurrent = CircleSpinSpeedMin;
+			List<MirrorActor> actors = GetActiveActors();
+			for (int i = 0; i < actors.Count; i++)
+				actors[i].SetPanelSpin(true, circleSpinSpeedCurrent);
+
+			SetCirclePhase(CirclePhase.PanelAccelerate);
+		}
+	}
+
+	// 8. Panel accelerates from slow to very fast, then break all mirrors
+	void UpdateCirclePanelAccelerate()
+	{
+		List<MirrorActor> actors = GetActiveActors();
+
+		// Linearly interpolate spin speed from min to max over CircleAccelerationDuration
+		float acceleration = (CircleSpinSpeedMax - CircleSpinSpeedMin) / CircleAccelerationDuration;
+		circleSpinSpeedCurrent = CircleSpinSpeedMin + acceleration * circlePhaseTimer;
+
+		if (circlePhaseTimer >= CircleAccelerationDuration)
+		{
+			// Acceleration complete, break all mirrors
+			for (int i = 0; i < actors.Count; i++)
+			{
+				if (actors[i] != null && !actors[i].IsBroken)
+					actors[i].ForceBreak();
+			}
+
 			SetCirclePhase(CirclePhase.Done);
+		}
+		else
+		{
+			// Update spin speed for all mirrors
+			for (int i = 0; i < actors.Count; i++)
+				actors[i].SetPanelSpin(true, circleSpinSpeedCurrent);
+		}
 	}
 
 	void ComputeCenter()
