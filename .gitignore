@@ -82,3 +82,8 @@ Assets/.DS_Store
 # Fichiers de backup (ex: video re-encodee, sauvegarde locale)
 *.bak
 *.bak.meta
+
+# Nephila API config — contient les clés (Nephila + OpenRouter). NE PAS committer.
+# Le .example.json (sans clés) reste versionné comme modele.
+/[Aa]ssets/[Ss]treamingAssets/nephila_config.json
+/[Aa]ssets/[Ss]treamingAssets/nephila_config.json.meta

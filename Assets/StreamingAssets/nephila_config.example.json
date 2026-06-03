@@ -1,0 +1,6 @@
+{
+  "apiKey": "nph_pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "collectionId": "your_collection_id",
+  "breakupMoveId": "your_move_id",
+  "openRouterKey": "sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}

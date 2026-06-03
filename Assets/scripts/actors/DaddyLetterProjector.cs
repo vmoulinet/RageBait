@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -94,6 +95,15 @@ public class DaddyLetterProjector : MonoBehaviour
 	bool is_japanese_cycle = false;
 	EraseSource last_erase_source = EraseSource.Natural;
 
+	// Raised when the EN letter has just finished typing (entering Holding).
+	// BreakupLetterService listens to collect redacted words and kick off the
+	// Nephila move. Not raised on the JP cycle.
+	public event Action OnLetterFinishedTyping;
+
+	// When set, the next EN write cycle displays this text instead of the
+	// TextAsset (the AI-generated breakup letter). Consumed once.
+	string generated_letter_override = null;
+
 	readonly List<WordSpan> word_spans = new List<WordSpan>();
 	int current_word_index = -1;
 
@@ -156,8 +166,18 @@ public class DaddyLetterProjector : MonoBehaviour
 		}
 
 		source_text = asset.text.Replace("\r\n", "\n").Replace("\r", "\n");
-	}
 
+		// On the EN cycle, a pending AI-generated breakup letter replaces the
+		// whole letter for this one write. Consumed once, then back to normal.
+		if (!is_japanese_cycle && !string.IsNullOrEmpty(generated_letter_override))
+		{
+			source_text = generated_letter_override.Replace("\r\n", "\n").Replace("\r", "\n");
+			generated_letter_override = null;
+
+			if (DebugLog)
+				Debug.Log("[daddy_letter] using AI-generated breakup letter | chars=" + source_text.Length);
+		}
+	}
 	void BuildWordSpans()
 	{
 		word_spans.Clear();
@@ -273,6 +293,11 @@ public class DaddyLetterProjector : MonoBehaviour
 		SetTypingSound(false);
 		ApplyTextToTarget();
 
+		// Letter fully written: on the EN cycle, notify listeners so the
+		// breakup-letter generation can start while we hold/erase.
+		if (!is_japanese_cycle && OnLetterFinishedTyping != null)
+			OnLetterFinishedTyping.Invoke();
+
 		if (HoldAfterFinishedDelay > 0f)
 			yield return new WaitForSeconds(HoldAfterFinishedDelay);
 
@@ -309,7 +334,7 @@ public class DaddyLetterProjector : MonoBehaviour
 
 		if (jitter > 0f)
 		{
-			float j = 1f + Random.Range(-jitter, jitter);
+			float j = 1f + UnityEngine.Random.Range(-jitter, jitter);
 			delay *= Mathf.Max(0.05f, j);
 		}
 
@@ -353,7 +378,7 @@ public class DaddyLetterProjector : MonoBehaviour
 			float delay = EraseCharDelay;
 			if (EraseCharJitter > 0f)
 			{
-				float j = 1f + Random.Range(-EraseCharJitter, EraseCharJitter);
+				float j = 1f + UnityEngine.Random.Range(-EraseCharJitter, EraseCharJitter);
 				delay *= Mathf.Max(0.05f, j);
 			}
 
@@ -585,5 +610,47 @@ public class DaddyLetterProjector : MonoBehaviour
 			builder.Append(CursorCharacter);
 
 		return builder.ToString();
+	}
+
+	// --- Nephila / breakup-letter integration ---
+
+	// Returns the words currently marked as redacted (mirror breaks), in reading
+	// order. Used by BreakupLetterService to feed the Nephila move.
+	public List<string> GetRedactedWords()
+	{
+		var words = new List<string>();
+		for (int i = 0; i < word_spans.Count; i++)
+		{
+			WordSpan span = word_spans[i];
+			if (!span.redacted)
+				continue;
+			if (span.start >= 0 && span.end <= source_text.Length && span.end > span.start)
+				words.Add(source_text.Substring(span.start, span.end - span.start));
+		}
+		return words;
+	}
+
+	// True while on the English cycle (the one that gets redacted / replaced).
+	public bool IsEnglishCycle
+	{
+		get { return !is_japanese_cycle; }
+	}
+
+	// Queues an AI-generated letter to fully replace the daddy letter on the next
+	// EN write cycle. Ignored if null/empty.
+	public void SetGeneratedLetterOverride(string letter)
+	{
+		if (string.IsNullOrEmpty(letter))
+			return;
+
+		generated_letter_override = letter;
+
+		if (DebugLog)
+			Debug.Log("[daddy_letter] breakup letter queued for next EN cycle | chars=" + letter.Length);
+	}
+
+	public bool HasGeneratedLetterPending
+	{
+		get { return !string.IsNullOrEmpty(generated_letter_override); }
 	}
 }
