@@ -157,11 +157,27 @@ def serial_loop():
                     line = ser.readline().decode("utf-8", errors="ignore").strip()
                     if not line:
                         continue
-                    if line.startswith("STOMP/"):
-                        log(f"[SERIAL] {line}")
-                    # On logue tout en fichier mais on n'affiche que les stomps
-                    log_fh.write(f"[SERIAL] {line}\n")
-                    log_fh.flush()
+                    if line.startswith("FORCE/"):
+                        try:
+                            val = float(line.split("/", 1)[1])
+                            with lock:
+                                state["force"] = val
+                                state["last_osc_time"] = time.time()
+                        except ValueError:
+                            pass
+                    elif line.startswith("STOMP/"):
+                        try:
+                            val = float(line.split("/", 1)[1])
+                        except ValueError:
+                            val = 0.0
+                        log(f"STOMP  {val:.2f}")
+                        with lock:
+                            state["last_stomp"] = (time.time(), val)
+                            state["last_osc_time"] = time.time()
+                    # On logue tout en fichier (sauf le flux FORCE/ trop verbeux)
+                    if not line.startswith("FORCE/"):
+                        log_fh.write(f"[SERIAL] {line}\n")
+                        log_fh.flush()
         except Exception as e:
             with lock:
                 state["serial_connected"] = False

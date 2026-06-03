@@ -87,3 +87,7 @@ Assets/.DS_Store
 # Le .example.json (sans clés) reste versionné comme modele.
 /[Aa]ssets/[Ss]treamingAssets/nephila_config.json
 /[Aa]ssets/[Ss]treamingAssets/nephila_config.json.meta
+
+# Controller : logs runtime et cache Python
+Controller/__pycache__/
+Controller/chase_log_*.txt

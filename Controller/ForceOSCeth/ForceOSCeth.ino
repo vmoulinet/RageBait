@@ -201,6 +201,17 @@ bool lowBattery = false;
 
 // ─── OSC helpers ─────────────────────────────────────────────────────────────
 void sendOSC(const char* address, float value) {
+  // Toujours emettre en Serial au format parse par monitor.py :
+  //   /force -> "FORCE/<val>"   |   /stomp -> "STOMP/<val>"
+  // Permet le mode Serial only (NET_NONE) ET sert de debug en reseau.
+  if (strcmp(address, "/force") == 0) {
+    Serial.print("FORCE/");
+    Serial.println(value, 2);
+  } else if (strcmp(address, "/stomp") == 0) {
+    Serial.print("STOMP/");
+    Serial.println(value, 2);
+  }
+
   if (netMode == NET_NONE) return;
   OSCMessage msg(address);
   msg.add(value);
