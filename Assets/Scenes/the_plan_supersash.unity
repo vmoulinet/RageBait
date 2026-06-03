@@ -1420,7 +1420,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &272237673
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1434,7 +1434,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DaddyLetterProjector
   LetterAsset: {fileID: 4900000, guid: c736533f5cd187e4f9ab0d3ce0ee687c, type: 3}
-  LetterAssetJP: {fileID: 4900000, guid: 7c185158242a0e04e8c9d5e6ab98d780, type: 3}
+  LetterAssetJP: {fileID: 0}
   TargetText: {fileID: 1354904605}
   TargetTextJP: {fileID: 2021871993}
   ProjectorLight: {fileID: 0}
@@ -1478,7 +1478,7 @@ Transform:
   m_GameObject: {fileID: 272237672}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -20.62, y: 5.84, z: 6.9}
+  m_LocalPosition: {x: -20.62, y: 6.18, z: 6.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -6188,7 +6188,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1354904605
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6209,7 +6209,31 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Daddy's letter
+  m_text: "\r\nMy darling,\r\n\r\nI hope you\u2019re doing well; I hope you\u2019re
+    doing better.\r\n\r\nI received your message, but I didn\u2019t know how to reply.
+    From my silence, you should have guessed that I don\u2019t agree with you at
+    all. But in the end, it doesn\u2019t matter what I believe because I have no
+    choice but to accept your decision, and that is the worst torture possible.\r\n\r\nLeave
+    if you want, leave right now, do whatever you want and whatever you need, but
+    please, never forget to feel ashamed. I see right through your little game. I
+    comprehend everything you do; I know everything you desire. We are not that different.
+    And since you\u2019re accusing me, here\u2019s what I have to say in response.\r\n\r\nFirst
+    of all, you\u2019re lying. The domination you accuse me of is hypocritical. Yes,
+    it\u2019s creepy, it\u2019s disgusting, but that\u2019s exactly what you wanted,
+    and you\u2019ve made me dependent on it. Nothing comes for free in this world.
+    That\u2019s the way it is. Affection is no exception to this rule: passion is
+    a currency like any other, and I\u2019ve paid beyond reason. \r\n\r\nSecond,
+    your adolescent beliefs mean nothing to me. You're trying to speak up; how cute.
+    You don\u2019t know what you are doing. You often told me I reminded you of your
+    father; don\u2019t worry, you\u2019ll soon long for me as you long for him. I\u2019m
+    proud of you, of the weight of your feet on my body, the darkness in your gaze,
+    the evil in your words. \r\n\r\nThat being said, I will miss your anger. No need
+    to apologise for your violence on our last night together. It\u2019s true that
+    you made me suffer, it\u2019s true that it\u2019s unacceptable, but carry on,
+    sweetheart, keep hurting me. I felt honoured that your rage was reserved for
+    me.\r\n\r\nDon\u2019t give me anything back, neither the money nor the respect.
+    I\u2019ll stay here at my desk, wearing your favourite tie, waiting for you to
+    understand why I keep forgiving you. \r\n\r\nDaddy loves you too.\r\n\r\n"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 771a48b8064604fa0b192c2130f387b4, type: 2}
   m_sharedMaterial: {fileID: -5959095759195725424, guid: 771a48b8064604fa0b192c2130f387b4,
@@ -6237,8 +6261,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 1.87
-  m_fontSizeBase: 1.87
+  m_fontSize: 2
+  m_fontSizeBase: 2
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -6350,8 +6374,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 20.62, y: 0}
-  m_SizeDelta: {x: 5.55, y: 5.89}
+  m_AnchoredPosition: {x: 20.62, y: 1}
+  m_SizeDelta: {x: 6.44, y: 5.89}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1365592612
 GameObject:
@@ -7782,10 +7806,16 @@ MonoBehaviour:
   SpiralInterval: 30
   SpiralDuration: 6
   SpiralStrength: 0.8
-  CircleRadius: 4
+  CircleRadius: 3
   CircleOrbitSpeed: 60
   CircleMirrorSpeed: 3
   CircleHoldDuration: 2
+  CirclePanelRotateAngle: 45
+  CirclePanelRotateSpeed: 180
+  CircleOrbitSpeedMultiplier: 2
+  CircleAccelerationDuration: 3
+  CircleSpinSpeedMin: 45
+  CircleSpinSpeedMax: 1800
   ChaosStrength: 1.5
   ChaosOrbitStrength: 2
   LineSpacing: 0.5
@@ -8083,7 +8113,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   volumeAnchorOverride: {fileID: 0}
-  antialiasing: 1
+  antialiasing: 3
   SMAAQuality: 2
   dithering: 1
   stopNaNs: 0
@@ -8649,7 +8679,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &1865680349
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -9685,7 +9715,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2021871992
 RectTransform:
   m_ObjectHideFlags: 0
