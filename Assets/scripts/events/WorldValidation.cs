@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class WorldValidation : MonoBehaviour
@@ -70,6 +71,10 @@ public class WorldValidation : MonoBehaviour
 	public Phase CurrentPhase => current_phase;
 	public bool IsActive => current_phase != Phase.Idle && current_phase != Phase.Done;
 
+	// Raised when a WorldValidation event begins (Trigger). BreakupLetterService
+	// listens to this to also generate a letter on world validation.
+	public event Action OnTriggered;
+
 	void OnEnable()
 	{
 		if (ChoreographyManager != null)
@@ -122,6 +127,9 @@ public class WorldValidation : MonoBehaviour
 
 		if (DebugLog)
 			Debug.Log("[world_validation] trigger | bodies=" + cached_bodies.Length);
+
+		if (OnTriggered != null)
+			OnTriggered.Invoke();
 	}
 
 	void Update()
@@ -282,8 +290,8 @@ public class WorldValidation : MonoBehaviour
 			if (body == null || body.isKinematic)
 				continue;
 
-			float spin_strength = Random.Range(InitialSpinMin, InitialSpinMax);
-			body.angularVelocity = Random.onUnitSphere * spin_strength;
+			float spin_strength = UnityEngine.Random.Range(InitialSpinMin, InitialSpinMax);
+			body.angularVelocity = UnityEngine.Random.onUnitSphere * spin_strength;
 		}
 	}
 
@@ -323,7 +331,7 @@ public class WorldValidation : MonoBehaviour
 						body.linearVelocity = body.linearVelocity.normalized * AttractMaxSpeed;
 				}
 
-				body.AddTorque(Random.insideUnitSphere * AttractSpinTorque, ForceMode.Acceleration);
+				body.AddTorque(UnityEngine.Random.insideUnitSphere * AttractSpinTorque, ForceMode.Acceleration);
 
 				float seed = Mathf.Abs(body.GetInstanceID()) * 0.00137f;
 				float nx = Mathf.PerlinNoise(seed, Time.time * NoiseFrequency) - 0.5f;
@@ -411,7 +419,7 @@ public class WorldValidation : MonoBehaviour
 
 		cached_orbital_sign = new int[cached_debris.Length];
 		for (int i = 0; i < cached_debris.Length; i++)
-			cached_orbital_sign[i] = Random.value < 0.5f ? -1 : 1;
+			cached_orbital_sign[i] = UnityEngine.Random.value < 0.5f ? -1 : 1;
 	}
 
 	void SaveState()

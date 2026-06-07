@@ -20,8 +20,9 @@ public class NephilaClient : MonoBehaviour
 	{
 		public string apiKey = "";          // Nephila key, starts with nph_
 		public string collectionId = "";    // collection the move is attached to
-		public string breakupMoveId = "";   // the "Breakup Letter Generator" move id
+		public string breakupMoveId = "";   // the (now generic) move id
 		public string openRouterKey = "";   // sk-or-... passed to the move at run time
+		public string systemPrompt = "";    // the LLM system prompt, sent to the move
 	}
 
 	[Header("Config")]
@@ -32,6 +33,20 @@ public class NephilaClient : MonoBehaviour
 	public string BaseUrl = "https://nephila.app";
 	[Tooltip("Hard timeout for a move run (LLM calls can take several seconds).")]
 	public int RequestTimeoutSeconds = 60;
+
+	[Header("Output")]
+	[Tooltip("If true, each generated letter is also stored back into the Nephila " +
+		"collection (the Digest auto-files it, generates a description and embedding).")]
+	public bool StoreInCollection = true;
+	[Tooltip("If true, store the letter in a folder named after the current date " +
+		"(yyyy-MM-dd), creating that folder if it doesn't exist yet. If false, the " +
+		"Digest auto-organizes the output.")]
+	public bool UseDailyFolder = true;
+	[Tooltip("If true, also upload the raw redacted words (the seed) as a separate " +
+		"file into a dedicated folder, alongside each generated letter.")]
+	public bool StoreRedactedWords = true;
+	[Tooltip("Folder name where the redacted-words seed files are stored.")]
+	public string RedactedFolderName = "redacted";
 
 	[Header("Debug")]
 	public bool DebugLog = false;
@@ -68,7 +83,7 @@ public class NephilaClient : MonoBehaviour
 		if (!File.Exists(path))
 		{
 			Debug.LogWarning("[nephila] config not found: " + path
-				+ " — Nephila features disabled. Copy nephila_config.example.json and fill it in.");
+				+ " ; Nephila features disabled. Copy nephila_config.example.json and fill it in.");
 			return;
 		}
 
@@ -108,20 +123,33 @@ public class NephilaClient : MonoBehaviour
 		var variables = new Dictionary<string, string>
 		{
 			{ "OPENROUTER_API_KEY", config.openRouterKey },
-			{ "REDACTED_WORDS", redactedWords ?? "" }
+			{ "REDACTED_WORDS", redactedWords ?? "" },
+			{ "SYSTEM_PROMPT", config.systemPrompt ?? "" }
 		};
 
-		return StartCoroutine(RunMoveRoutine(config.breakupMoveId, variables, on_success, on_error));
+		return StartCoroutine(RunMoveRoutine(config.breakupMoveId, variables, redactedWords ?? "", on_success, on_error));
 	}
 
 	IEnumerator RunMoveRoutine(string moveId, Dictionary<string, string> variables,
-		Action<string> on_success, Action<string> on_error)
+		string redactedWords, Action<string> on_success, Action<string> on_error)
 	{
+		// Decide where the output goes. When daily folders are on, resolve (or
+		// create) a folder named after today's date and target it explicitly;
+		// otherwise let the server auto-organize (addOutputToFolder = true).
+		string targetFolderId = null;
+		if (StoreInCollection && UseDailyFolder)
+		{
+			string folderName = GetTodayFolderName();
+			yield return StartCoroutine(ResolveFolder(folderName, id => targetFolderId = id));
+			// If resolution failed we fall back to auto-organize rather than losing the letter.
+		}
+
 		string url = BaseUrl + "/api/public/moves/" + moveId + "/run";
-		string body = BuildRunBody(config.collectionId, variables);
+		string body = BuildRunBody(config.collectionId, variables, StoreInCollection, targetFolderId);
 
 		if (DebugLog)
-			Debug.Log("[nephila] run move " + moveId + " | vars=" + variables.Count);
+			Debug.Log("[nephila] run move " + moveId + " | vars=" + variables.Count
+				+ (StoreInCollection ? (" | folder=" + (targetFolderId ?? "auto")) : ""));
 
 		using (UnityWebRequest req = new UnityWebRequest(url, "POST"))
 		{
@@ -160,12 +188,75 @@ public class NephilaClient : MonoBehaviour
 
 			if (DebugLog)
 				Debug.Log("[nephila] letter received | " + text.Length + " chars");
+
+			// Best-effort: archive the raw redacted words as a separate seed file.
+			// Failure here must not stop the letter from being delivered.
+			if (StoreRedactedWords && !string.IsNullOrEmpty(redactedWords))
+				yield return StartCoroutine(StoreRedactedWordsFile(redactedWords));
+
 			on_success?.Invoke(text);
 		}
 	}
 
-	// Builds: {"collectionId":"...","contextConfig":{"dynamicVariableValues":{...}}}
-	static string BuildRunBody(string collectionId, Dictionary<string, string> variables)
+	// Uploads the raw redacted words (CSV) as a text file into the redacted folder,
+	// named "yy.MM.dd_HH-mm-ss_redacted.txt". Creates the folder if needed.
+	IEnumerator StoreRedactedWordsFile(string redactedWords)
+	{
+		string folderId = null;
+		yield return StartCoroutine(ResolveFolder(RedactedFolderName, id => folderId = id));
+		if (string.IsNullOrEmpty(folderId))
+		{
+			if (DebugLog)
+				Debug.LogWarning("[nephila] redacted folder unavailable, skipping seed upload");
+			yield break;
+		}
+
+		string fileName = DateTime.Now.ToString("yy.MM.dd_HH-mm-ss") + "_redacted.txt";
+		yield return StartCoroutine(UploadTextFile(folderId, fileName, redactedWords));
+	}
+
+	IEnumerator UploadTextFile(string folderId, string fileName, string content)
+	{
+		string url = BaseUrl + "/api/public/items/upload";
+		string boundary = "----NephilaBoundary" + Guid.NewGuid().ToString("N");
+
+		var parts = new List<IMultipartFormSection>
+		{
+			new MultipartFormFileSection("file", Encoding.UTF8.GetBytes(content), fileName, "text/plain"),
+			new MultipartFormDataSection("collectionId", config.collectionId),
+			new MultipartFormDataSection("folderId", folderId)
+		};
+		byte[] body = UnityWebRequest.SerializeFormSections(parts, Encoding.UTF8.GetBytes(boundary));
+
+		using (UnityWebRequest req = new UnityWebRequest(url, "POST"))
+		{
+			req.uploadHandler = new UploadHandlerRaw(body);
+			req.downloadHandler = new DownloadHandlerBuffer();
+			req.SetRequestHeader("Content-Type", "multipart/form-data; boundary=" + boundary);
+			req.SetRequestHeader("X-API-Key", config.apiKey);
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				if (DebugLog)
+					Debug.LogWarning("[nephila] seed upload failed | " + req.responseCode + " "
+						+ req.error + " | " + req.downloadHandler.text);
+				yield break;
+			}
+
+			if (DebugLog)
+				Debug.Log("[nephila] redacted seed stored | " + fileName);
+		}
+	}
+
+	// Builds: {"collectionId":"...","contextConfig":{"dynamicVariableValues":{...}}
+	//          [,"addOutputToFolder": <folderId-string> | true]}
+	// When storeOutput is true, the server files the result back into the
+	// collection. A folderId targets a specific folder; otherwise true lets the
+	// Digest auto-organize it (with description + embedding).
+	static string BuildRunBody(string collectionId, Dictionary<string, string> variables,
+		bool storeOutput, string folderId)
 	{
 		var sb = new StringBuilder(256);
 		sb.Append("{\"collectionId\":");
@@ -183,8 +274,102 @@ public class NephilaClient : MonoBehaviour
 			AppendJsonString(sb, kv.Value);
 		}
 
-		sb.Append("}}}");
+		sb.Append("}}");
+		if (storeOutput)
+		{
+			sb.Append(",\"addOutputToFolder\":");
+			if (!string.IsNullOrEmpty(folderId))
+				AppendJsonString(sb, folderId);
+			else
+				sb.Append("true");
+		}
+		sb.Append('}');
 		return sb.ToString();
+	}
+
+	// Today's folder name, e.g. "2026-06-07".
+	static string GetTodayFolderName()
+	{
+		return DateTime.Now.ToString("yyyy-MM-dd");
+	}
+
+	// Finds the collection folder named folderName; creates it if missing.
+	// Calls on_resolved with the folder id, or null on failure.
+	IEnumerator ResolveFolder(string folderName, Action<string> on_resolved)
+	{
+		// 1) Look for an existing folder with this name.
+		string existing = null;
+		yield return StartCoroutine(FindFolderId(folderName, id => existing = id));
+		if (!string.IsNullOrEmpty(existing))
+		{
+			if (DebugLog)
+				Debug.Log("[nephila] folder exists | " + folderName + " -> " + existing);
+			on_resolved(existing);
+			yield break;
+		}
+
+		// 2) Create it.
+		string created = null;
+		yield return StartCoroutine(CreateFolder(folderName, id => created = id));
+		if (DebugLog)
+			Debug.Log("[nephila] folder " + (created != null ? "created" : "create FAILED")
+				+ " | " + folderName + (created != null ? (" -> " + created) : ""));
+		on_resolved(created);
+	}
+
+	IEnumerator FindFolderId(string folderName, Action<string> on_found)
+	{
+		string url = BaseUrl + "/api/public/collections/" + config.collectionId;
+		using (UnityWebRequest req = UnityWebRequest.Get(url))
+		{
+			req.SetRequestHeader("X-API-Key", config.apiKey);
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				if (DebugLog)
+					Debug.LogWarning("[nephila] list folders failed | " + req.responseCode + " " + req.error);
+				on_found(null);
+				yield break;
+			}
+
+			on_found(FindFolderIdInJson(req.downloadHandler.text, folderName));
+		}
+	}
+
+	IEnumerator CreateFolder(string folderName, Action<string> on_created)
+	{
+		string url = BaseUrl + "/api/public/folders/create";
+
+		var sb = new StringBuilder(128);
+		sb.Append("{\"collectionId\":");
+		AppendJsonString(sb, config.collectionId);
+		sb.Append(",\"type\":");
+		AppendJsonString(sb, folderName);
+		sb.Append('}');
+
+		using (UnityWebRequest req = new UnityWebRequest(url, "POST"))
+		{
+			req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(sb.ToString()));
+			req.downloadHandler = new DownloadHandlerBuffer();
+			req.SetRequestHeader("Content-Type", "application/json");
+			req.SetRequestHeader("X-API-Key", config.apiKey);
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				if (DebugLog)
+					Debug.LogWarning("[nephila] create folder failed | " + req.responseCode + " "
+						+ req.error + " | " + req.downloadHandler.text);
+				on_created(null);
+				yield break;
+			}
+
+			// Response: {"success":true,"folder":{"id":"...","type":"...",...}}
+			on_created(ExtractJsonValue(req.downloadHandler.text, "id"));
+		}
 	}
 
 	static void AppendJsonString(StringBuilder sb, string s)
@@ -285,5 +470,69 @@ public class NephilaClient : MonoBehaviour
 		}
 
 		return sb.ToString();
+	}
+
+	// In the collection JSON, "folders" is an object keyed by folder name:
+	// {"folders":{"2026-06-07":{"id":"...","type":"2026-06-07",...}}}.
+	// Locates the entry for folderName and returns its "id".
+	static string FindFolderIdInJson(string json, string folderName)
+	{
+		if (string.IsNullOrEmpty(json))
+			return null;
+
+		// Scope the search to the folders object so we don't match an id elsewhere.
+		int foldersIdx = json.IndexOf("\"folders\"", StringComparison.Ordinal);
+		int searchFrom = foldersIdx >= 0 ? foldersIdx : 0;
+
+		string key = "\"" + folderName + "\"";
+		int keyIdx = json.IndexOf(key, searchFrom, StringComparison.Ordinal);
+		if (keyIdx < 0)
+			return null;
+
+		return ExtractJsonValue(json, "id", keyIdx);
+	}
+
+	// Returns the string value of the first "<key>":"<value>" occurring at or
+	// after startIndex, or null. Only handles string values (enough for ids).
+	static string ExtractJsonValue(string json, string key, int startIndex = 0)
+	{
+		if (string.IsNullOrEmpty(json))
+			return null;
+
+		string token = "\"" + key + "\"";
+		int k = json.IndexOf(token, startIndex, StringComparison.Ordinal);
+		if (k < 0)
+			return null;
+
+		int colon = json.IndexOf(':', k + token.Length);
+		if (colon < 0)
+			return null;
+
+		int i = colon + 1;
+		while (i < json.Length && char.IsWhiteSpace(json[i]))
+			i++;
+
+		if (i >= json.Length || json[i] != '"')
+			return null;
+
+		i++; // past opening quote
+		int start = i;
+		var sb = new StringBuilder(48);
+		while (i < json.Length)
+		{
+			char c = json[i];
+			if (c == '\\' && i + 1 < json.Length)
+			{
+				sb.Append(json[i + 1]);
+				i += 2;
+				continue;
+			}
+			if (c == '"')
+				break;
+			sb.Append(c);
+			i++;
+		}
+
+		return i > start ? sb.ToString() : null;
 	}
 }

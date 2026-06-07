@@ -50,6 +50,10 @@ public class DaddyLetterProjector : MonoBehaviour
 	public WorldValidation WorldValidation;
 	public float RestartWaitTimeout = 30f;
 
+	[Header("Cycle")]
+	[Tooltip("If false, never switch to the Japanese letter; every rewrite stays English. Keep off until LetterAssetJP is wired up.")]
+	public bool EnableJapaneseCycle = false;
+
 	[Header("Audio")]
 	public SoundManager SoundManager;
 
@@ -100,9 +104,10 @@ public class DaddyLetterProjector : MonoBehaviour
 	// Nephila move. Not raised on the JP cycle.
 	public event Action OnLetterFinishedTyping;
 
-	// When set, the next EN write cycle displays this text instead of the
-	// TextAsset (the AI-generated breakup letter). Consumed once.
-	string generated_letter_override = null;
+	// Queue of AI-generated breakup letters waiting to be shown. Each EN write
+	// cycle dequeues one (replacing the whole letter). BreakupLetterService keeps
+	// this topped up so a letter is ready ahead of time. Empty => original letter.
+	readonly Queue<string> generated_letter_queue = new Queue<string>();
 
 	readonly List<WordSpan> word_spans = new List<WordSpan>();
 	int current_word_index = -1;
@@ -167,15 +172,17 @@ public class DaddyLetterProjector : MonoBehaviour
 
 		source_text = asset.text.Replace("\r\n", "\n").Replace("\r", "\n");
 
-		// On the EN cycle, a pending AI-generated breakup letter replaces the
-		// whole letter for this one write. Consumed once, then back to normal.
-		if (!is_japanese_cycle && !string.IsNullOrEmpty(generated_letter_override))
+		// On the EN cycle, dequeue the next AI-generated breakup letter (if any)
+		// and let it replace the whole letter for this write. Empty queue => the
+		// original letter is shown.
+		if (!is_japanese_cycle && generated_letter_queue.Count > 0)
 		{
-			source_text = generated_letter_override.Replace("\r\n", "\n").Replace("\r", "\n");
-			generated_letter_override = null;
+			string next = generated_letter_queue.Dequeue();
+			source_text = next.Replace("\r\n", "\n").Replace("\r", "\n");
 
 			if (DebugLog)
-				Debug.Log("[daddy_letter] using AI-generated breakup letter | chars=" + source_text.Length);
+				Debug.Log("[daddy_letter] using AI-generated breakup letter | chars="
+					+ source_text.Length + " | remaining in queue=" + generated_letter_queue.Count);
 		}
 	}
 	void BuildWordSpans()
@@ -398,7 +405,9 @@ public class DaddyLetterProjector : MonoBehaviour
 		if (RestartDelay > 0f)
 			yield return new WaitForSeconds(RestartDelay);
 
-		is_japanese_cycle = !is_japanese_cycle;
+		// Alternate EN/JP only when the Japanese cycle is enabled; otherwise stay
+		// English every rewrite (so generated letters always get a turn).
+		is_japanese_cycle = EnableJapaneseCycle ? !is_japanese_cycle : false;
 		LoadLetter();
 		BuildWordSpans();
 		ApplyActiveTargetForCycle();
@@ -636,21 +645,29 @@ public class DaddyLetterProjector : MonoBehaviour
 		get { return !is_japanese_cycle; }
 	}
 
-	// Queues an AI-generated letter to fully replace the daddy letter on the next
-	// EN write cycle. Ignored if null/empty.
-	public void SetGeneratedLetterOverride(string letter)
+	// Enqueues an AI-generated letter. Each is shown (and consumed) on a later EN
+	// write cycle. BreakupLetterService keeps the queue topped up. Ignored if empty.
+	public void EnqueueGeneratedLetter(string letter)
 	{
 		if (string.IsNullOrEmpty(letter))
 			return;
 
-		generated_letter_override = letter;
+		generated_letter_queue.Enqueue(letter);
 
 		if (DebugLog)
-			Debug.Log("[daddy_letter] breakup letter queued for next EN cycle | chars=" + letter.Length);
+			Debug.Log("[daddy_letter] breakup letter enqueued | chars=" + letter.Length
+				+ " | queue size=" + generated_letter_queue.Count);
 	}
 
-	public bool HasGeneratedLetterPending
+	// Number of generated letters currently waiting to be shown.
+	public int QueuedLetterCount
 	{
-		get { return !string.IsNullOrEmpty(generated_letter_override); }
+		get { return generated_letter_queue.Count; }
+	}
+
+	// Backwards-compatible alias: queues a single letter.
+	public void SetGeneratedLetterOverride(string letter)
+	{
+		EnqueueGeneratedLetter(letter);
 	}
 }
