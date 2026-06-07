@@ -23,6 +23,11 @@ public class NephilaClient : MonoBehaviour
 		public string breakupMoveId = "";   // the (now generic) move id
 		public string openRouterKey = "";   // sk-or-... passed to the move at run time
 		public string systemPrompt = "";    // the LLM system prompt, sent to the move
+
+		// Name of an EXTERNAL folder (filled by someone else) holding word lists.
+		// When non-empty and a file exists there, the newest file's words REPLACE
+		// the redacted words for the generation (stronger influence). Empty = off.
+		public string externalWordsFolderName = "";
 	}
 
 	[Header("Config")]
@@ -47,12 +52,17 @@ public class NephilaClient : MonoBehaviour
 	public bool StoreRedactedWords = true;
 	[Tooltip("Folder name where the redacted-words seed files are stored.")]
 	public string RedactedFolderName = "redacted";
+	[Tooltip("If true, upload an empty marker .txt file per mirror smashed.")]
+	public bool StoreSmashedMarkers = true;
+	[Tooltip("Folder name where the per-mirror empty marker files are stored.")]
+	public string SmashedFolderName = "SMASHED";
 
 	[Header("Debug")]
 	public bool DebugLog = false;
 
 	Config config;
 	bool config_loaded = false;
+	string smashed_folder_id = null; // cached once resolved (mirrors break in bursts)
 
 	public bool IsConfigured
 	{
@@ -120,14 +130,153 @@ public class NephilaClient : MonoBehaviour
 			return null;
 		}
 
+		return StartCoroutine(RunBreakupLetterRoutine(redactedWords ?? "", on_success, on_error));
+	}
+
+	IEnumerator RunBreakupLetterRoutine(string redactedWords, Action<string> on_success, Action<string> on_error)
+	{
+		// If an external word-list folder is configured and holds a file, the newest
+		// file's words REPLACE the redacted words (stronger influence).
+		string words = redactedWords;
+		if (!string.IsNullOrEmpty(config.externalWordsFolderName))
+		{
+			string external = null;
+			yield return StartCoroutine(FetchLatestExternalWords(s => external = s));
+			if (!string.IsNullOrEmpty(external))
+			{
+				words = external.Trim();
+				if (DebugLog)
+					Debug.Log("[nephila] using EXTERNAL words (override redacted) | " + words);
+			}
+		}
+
 		var variables = new Dictionary<string, string>
 		{
 			{ "OPENROUTER_API_KEY", config.openRouterKey },
-			{ "REDACTED_WORDS", redactedWords ?? "" },
+			{ "REDACTED_WORDS", words },
 			{ "SYSTEM_PROMPT", config.systemPrompt ?? "" }
 		};
 
-		return StartCoroutine(RunMoveRoutine(config.breakupMoveId, variables, redactedWords ?? "", on_success, on_error));
+		yield return StartCoroutine(RunMoveRoutine(config.breakupMoveId, variables, words, on_success, on_error));
+	}
+
+	// Fetches the words from the newest file in the external word-list folder.
+	// Calls on_words with the file's text, or null if none / on failure.
+	IEnumerator FetchLatestExternalWords(Action<string> on_words)
+	{
+		// 1) Get the collection JSON.
+		string colJson = null;
+		yield return StartCoroutine(GetCollectionJson(s => colJson = s));
+		if (string.IsNullOrEmpty(colJson))
+		{
+			on_words(null);
+			yield break;
+		}
+
+		// 2) Find the newest item id inside the external folder.
+		string itemId = FindNewestItemIdInFolder(colJson, config.externalWordsFolderName);
+		if (string.IsNullOrEmpty(itemId))
+		{
+			if (DebugLog)
+				Debug.Log("[nephila] external folder '" + config.externalWordsFolderName + "' empty or absent");
+			on_words(null);
+			yield break;
+		}
+
+		// 3) Resolve its signed URL.
+		string fileUrl = null;
+		yield return StartCoroutine(GetItemUrl(itemId, u => fileUrl = u));
+		if (string.IsNullOrEmpty(fileUrl))
+		{
+			on_words(null);
+			yield break;
+		}
+
+		// 4) Download the text.
+		using (UnityWebRequest req = UnityWebRequest.Get(fileUrl))
+		{
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				if (DebugLog)
+					Debug.LogWarning("[nephila] external words download failed | " + req.responseCode + " " + req.error);
+				on_words(null);
+				yield break;
+			}
+			on_words(req.downloadHandler.text);
+		}
+	}
+
+	IEnumerator GetCollectionJson(Action<string> on_json)
+	{
+		string url = BaseUrl + "/api/public/collections/" + config.collectionId;
+		using (UnityWebRequest req = UnityWebRequest.Get(url))
+		{
+			req.SetRequestHeader("X-API-Key", config.apiKey);
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+			on_json(req.result == UnityWebRequest.Result.Success ? req.downloadHandler.text : null);
+		}
+	}
+
+	IEnumerator GetItemUrl(string itemId, Action<string> on_url)
+	{
+		string url = BaseUrl + "/api/public/items/" + itemId + "/url";
+		using (UnityWebRequest req = UnityWebRequest.Get(url))
+		{
+			req.SetRequestHeader("X-API-Key", config.apiKey);
+			req.timeout = Mathf.Max(1, RequestTimeoutSeconds);
+			yield return req.SendWebRequest();
+			if (req.result != UnityWebRequest.Result.Success)
+			{
+				on_url(null);
+				yield break;
+			}
+			on_url(ExtractJsonValue(req.downloadHandler.text, "url"));
+		}
+	}
+
+	// Uploads one empty marker file into the SMASHED folder. Call once per mirror
+	// smashed. Best-effort and silent; needs only the Nephila key + collection
+	// (no move / OpenRouter). No-op if disabled or not configured.
+	public void UploadSmashedMarker()
+	{
+		EnsureConfig();
+
+		if (!StoreSmashedMarkers)
+			return;
+
+		if (config == null || string.IsNullOrEmpty(config.apiKey) || string.IsNullOrEmpty(config.collectionId))
+		{
+			if (DebugLog)
+				Debug.LogWarning("[nephila] smashed marker skipped ; missing apiKey/collectionId");
+			return;
+		}
+
+		StartCoroutine(UploadSmashedMarkerRoutine());
+	}
+
+	IEnumerator UploadSmashedMarkerRoutine()
+	{
+		// Mirrors break in bursts; cache the folder id so we don't GET the whole
+		// collection for every single marker.
+		if (string.IsNullOrEmpty(smashed_folder_id))
+		{
+			string folderId = null;
+			yield return StartCoroutine(ResolveFolder(SmashedFolderName, id => folderId = id));
+			smashed_folder_id = folderId;
+		}
+
+		if (string.IsNullOrEmpty(smashed_folder_id))
+		{
+			if (DebugLog)
+				Debug.LogWarning("[nephila] SMASHED folder unavailable, skipping marker");
+			yield break;
+		}
+
+		string fileName = DateTime.Now.ToString("yy.MM.dd_HH-mm-ss") + "_smashed.txt";
+		yield return StartCoroutine(UploadTextFile(smashed_folder_id, fileName, ""));
 	}
 
 	IEnumerator RunMoveRoutine(string moveId, Dictionary<string, string> variables,
@@ -220,9 +369,13 @@ public class NephilaClient : MonoBehaviour
 		string url = BaseUrl + "/api/public/items/upload";
 		string boundary = "----NephilaBoundary" + Guid.NewGuid().ToString("N");
 
+		// UnityWebRequest's multipart file section rejects empty body data, so an
+		// "empty" marker file gets a single newline (smallest possible payload).
+		byte[] fileBytes = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(content) ? "\n" : content);
+
 		var parts = new List<IMultipartFormSection>
 		{
-			new MultipartFormFileSection("file", Encoding.UTF8.GetBytes(content), fileName, "text/plain"),
+			new MultipartFormFileSection("file", fileBytes, fileName, "text/plain"),
 			new MultipartFormDataSection("collectionId", config.collectionId),
 			new MultipartFormDataSection("folderId", folderId)
 		};
@@ -490,6 +643,69 @@ public class NephilaClient : MonoBehaviour
 			return null;
 
 		return ExtractJsonValue(json, "id", keyIdx);
+	}
+
+	// Within the named folder's block, finds the item ("_id") whose "createdAt" is
+	// the most recent (ISO timestamps compare lexically). Returns null if none.
+	static string FindNewestItemIdInFolder(string json, string folderName)
+	{
+		if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(folderName))
+			return null;
+
+		int foldersIdx = json.IndexOf("\"folders\"", StringComparison.Ordinal);
+		int searchFrom = foldersIdx >= 0 ? foldersIdx : 0;
+		int keyIdx = json.IndexOf("\"" + folderName + "\"", searchFrom, StringComparison.Ordinal);
+		if (keyIdx < 0)
+			return null;
+
+		// Isolate this folder's object by brace matching from the first '{' after the key.
+		int open = json.IndexOf('{', keyIdx);
+		if (open < 0)
+			return null;
+
+		int depth = 0;
+		int end = -1;
+		for (int i = open; i < json.Length; i++)
+		{
+			char c = json[i];
+			if (c == '{') depth++;
+			else if (c == '}') { depth--; if (depth == 0) { end = i; break; } }
+		}
+		if (end < 0)
+			return null;
+
+		string block = json.Substring(open, end - open + 1);
+
+		// Scan each "_id" and the "createdAt" that follows it; keep the newest.
+		string bestId = null;
+		string bestDate = null;
+		int pos = 0;
+		while (true)
+		{
+			int idIdx = block.IndexOf("\"_id\"", pos, StringComparison.Ordinal);
+			if (idIdx < 0)
+				break;
+
+			string id = ExtractJsonValue(block, "_id", idIdx);
+			string date = null;
+			int dateIdx = block.IndexOf("\"createdAt\"", idIdx, StringComparison.Ordinal);
+			if (dateIdx >= 0)
+				date = ExtractJsonValue(block, "createdAt", dateIdx);
+
+			if (!string.IsNullOrEmpty(id))
+			{
+				string cmp = date ?? "";
+				if (bestId == null || string.CompareOrdinal(cmp, bestDate ?? "") > 0)
+				{
+					bestId = id;
+					bestDate = cmp;
+				}
+			}
+
+			pos = idIdx + 5;
+		}
+
+		return bestId;
 	}
 
 	// Returns the string value of the first "<key>":"<value>" occurring at or

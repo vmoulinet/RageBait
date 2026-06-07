@@ -15,6 +15,7 @@ public class MirrorManager : MonoBehaviour
 	public SoundManager SoundManager;
 	public DaddyLetterProjector DaddyLetterProjector;
 	public MirrorMeltdown MirrorMeltdown;
+	public NephilaClient NephilaClient;
 
 	[Header("Counts")]
 	public int StartingMirrorCount = 6;
@@ -221,6 +222,9 @@ public class MirrorManager : MonoBehaviour
 
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyMirrorBroken();
+
+		if (NephilaClient != null)
+			NephilaClient.UploadSmashedMarker();
 
 		if (ChoreographyManager != null)
 			ChoreographyManager.RefreshTargets();
