@@ -230,9 +230,11 @@ public class VideoManager : MonoBehaviour
 		Bind_render_texture();
 	}
 
-	// Lie explicitement la RenderTexture au VideoPlayer et au materiau du quad. En
-	// build, ne pas compter sur une RT hardcodee dans le shadergraph (lecture d'une
-	// RT vide) : on assigne la meme RT vivante des deux cotes.
+	// Lie la RenderTexture au materiau du quad et met le VideoPlayer en mode APIOnly.
+	// En build Windows, le mode RenderTexture ne blit PAS toujours les frames decodees
+	// vers la targetTexture (la RT reste blanche -> quad gris) alors que frame avance.
+	// On passe donc en APIOnly et on blit VideoPlayer.texture -> RT a la main dans Update,
+	// ce qui se comporte de maniere identique en editeur et en build.
 	void Bind_render_texture()
 	{
 		if (VideoRenderTexture == null)
@@ -243,12 +245,29 @@ public class VideoManager : MonoBehaviour
 
 		if (VideoPlayer != null)
 		{
-			VideoPlayer.renderMode = VideoRenderMode.RenderTexture;
-			VideoPlayer.targetTexture = VideoRenderTexture;
+			VideoPlayer.renderMode = VideoRenderMode.APIOnly;
+			VideoPlayer.targetTexture = null;
 		}
 
 		if (video_material_instance != null && video_has_texture_property)
 			video_material_instance.SetTexture(video_texture_property_name, VideoRenderTexture);
+	}
+
+	// Blit manuel de la frame decodee vers la RenderTexture du quad. Indispensable en
+	// build (le mode RenderTexture du VideoPlayer ne peint pas la RT sur Windows build).
+	void LateUpdate()
+	{
+		if (VideoPlayer == null || VideoRenderTexture == null)
+			return;
+
+		if (!VideoPlayer.isPlaying)
+			return;
+
+		Texture frame = VideoPlayer.texture;
+		if (frame == null)
+			return;
+
+		Graphics.Blit(frame, VideoRenderTexture);
 	}
 
 	void Set_video_alpha(float alpha)
