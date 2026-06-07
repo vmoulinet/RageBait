@@ -1462,6 +1462,7 @@ MonoBehaviour:
   VideoManager: {fileID: 313604262}
   WorldValidation: {fileID: 919968336}
   RestartWaitTimeout: 30
+  EnableJapaneseCycle: 0
   SoundManager: {fileID: 633454979}
   RedactionMarkOpen: <mark=#FFFFFFFF padding="6,6,2,2">
   RedactionMarkClose: </mark>
@@ -2844,6 +2845,7 @@ MonoBehaviour:
   SoundManager: {fileID: 633454979}
   DaddyLetterProjector: {fileID: 272237673}
   MirrorMeltdown: {fileID: 876324687}
+  NephilaClient: {fileID: 1788735664}
   StartingMirrorCount: 9
   SpawnInterval: 3
   RespawnDelay: 4
@@ -8049,7 +8051,7 @@ MonoBehaviour:
   WorldValidation: {fileID: 919968336}
   MinRedactedWords: 1
   SkipIfRequestInFlight: 1
-  SkipIfLetterPending: 1
+  BufferSize: 1
   DebugLog: 1
   TestKey: 117
   TestWords: money, shame, leave, mine, quiet, enough, father, forgive
@@ -8072,6 +8074,8 @@ MonoBehaviour:
   UseDailyFolder: 1
   StoreRedactedWords: 1
   RedactedFolderName: redacted
+  StoreSmashedMarkers: 1
+  SmashedFolderName: SMASHED
   DebugLog: 1
 --- !u!1 &1823688464
 GameObject:
