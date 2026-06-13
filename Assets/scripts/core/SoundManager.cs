@@ -18,6 +18,12 @@ public class SoundManager : MonoBehaviour
 	public float MirrorBreakReverbDecayTime = 1f;
 	public float MirrorBreakReverbLevel = 0f;
 
+	[Header("Stomp")]
+	public AudioClip[] StompClips;
+	[Range(0f, 1f)]
+	public float StompVolume = 1f;
+	public float StompPitchRandom = 0.04f;
+	public float StompSpatialBlend = 0f;
 	[Header("Pendulum Loop")]
 	public AudioSource[] PendulumLoopSources = new AudioSource[3];
 	public AudioClip[] PendulumLoopClips = new AudioClip[3];
@@ -258,6 +264,16 @@ public class SoundManager : MonoBehaviour
 	public void PlayMirrorBreak(Vector3 world_position)
 	{
 		Play_one_shot(MirrorBreakClips, world_position, MirrorBreakVolume, MirrorBreakPitchRandom, MirrorBreakSpatialBlend, "mirror_break", MirrorBreakReverbEnabled);
+	}
+
+	public void PlayStomp()
+	{
+		PlayStomp(transform.position);
+	}
+
+	public void PlayStomp(Vector3 world_position)
+	{
+		Play_one_shot(StompClips, world_position, StompVolume, StompPitchRandom, StompSpatialBlend, "stomp");
 	}
 
 	void Play_one_shot(AudioClip[] clips, Vector3 world_position, float volume, float pitch_random, float spatial_blend, string label, bool apply_reverb = false)

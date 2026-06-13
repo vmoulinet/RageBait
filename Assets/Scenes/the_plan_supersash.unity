@@ -2701,6 +2701,11 @@ MonoBehaviour:
   MirrorBreakReverbRoom: 24
   MirrorBreakReverbDecayTime: 91.5
   MirrorBreakReverbLevel: 618.2
+  StompClips:
+  - {fileID: 8300000, guid: 85a17b61e6bd02f4ea7060793dc2feb0, type: 3}
+  StompVolume: 1
+  StompPitchRandom: 0
+  StompSpatialBlend: 0
   PendulumLoopSources:
   - {fileID: 1837470025}
   - {fileID: 205338340}
@@ -3227,6 +3232,8 @@ MonoBehaviour:
   TypingResumeTimeout: 30
   StompTriggersWorldValidation: 1
   WorldValidationDelay: 1
+  BlockStompUntilTimeout: 1
+  StompGateTimeout: 18
 --- !u!1 &800881236
 GameObject:
   m_ObjectHideFlags: 0

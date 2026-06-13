@@ -23,9 +23,19 @@ public class EventManager : MonoBehaviour
 	public bool StompTriggersWorldValidation = true;
 	public float WorldValidationDelay = 1f;
 
+	[Header("Stomp Gate")]
+	[Tooltip("Ignore new stomps for a while after a stomp.")]
+	public bool BlockStompUntilTimeout = true;
+	[Tooltip("How long new stomps are ignored after a stomp, in seconds.")]
+	public float StompGateTimeout = 18f;
+
 	int stomp_count = 0;
 	float last_stomp_time = -999f;
 	float last_stomp_force = 0f;
+
+	bool stomp_gate_closed = false;
+	float stomp_gate_open_time = 0f;
+
 
 	public int StompCount
 	{
@@ -72,6 +82,8 @@ public class EventManager : MonoBehaviour
 
 	void Update()
 	{
+		UpdateStompGate();
+
 		if (!EnableKeyboardDebugStomp)
 			return;
 
@@ -79,11 +91,38 @@ public class EventManager : MonoBehaviour
 			NotifyStomp(1f, "debug_key");
 	}
 
+	void UpdateStompGate()
+	{
+		if (!stomp_gate_closed)
+			return;
+
+		if (Time.unscaledTime - stomp_gate_open_time >= StompGateTimeout)
+		{
+			if (DebugLogEvents)
+				Debug.Log("[event_manager] stomp gate released | reason=timeout");
+			stomp_gate_closed = false;
+		}
+	}
+
 	public void NotifyStomp(float stomp_force, string source = "io_manager")
 	{
+		// A new stomp is ignored until the gate timeout has elapsed.
+		if (BlockStompUntilTimeout && stomp_gate_closed)
+		{
+			if (DebugLogEvents)
+				Debug.Log("[event_manager] stomp ignored | gate closed (timeout not elapsed) | source=" + source);
+			return;
+		}
+
 		stomp_count++;
 		last_stomp_time = Time.unscaledTime;
 		last_stomp_force = stomp_force;
+
+		if (BlockStompUntilTimeout)
+		{
+			stomp_gate_closed = true;
+			stomp_gate_open_time = Time.unscaledTime;
+		}
 
 		if (DebugLogEvents)
 		{
@@ -103,6 +142,9 @@ public class EventManager : MonoBehaviour
 
 		if (StompWordStrobe != null)
 			StompWordStrobe.Trigger();
+
+		if (SoundManager != null)
+			SoundManager.PlayStomp();
 
 		RouteDefaultStompResponse(stomp_force, source);
 	}
