@@ -74,6 +74,11 @@ public class ChoreographyManager : MonoBehaviour
 	public float CircleSpinSpeedMin = 45f;
 	public float CircleSpinSpeedMax = 1800f;
 
+	[Header("Circle Final Projection")]
+	// A la fin de la chore Circle, les miroirs sont projetes radialement depuis l'anchor.
+	public float CircleBreakProjectionForce = 1.5f; // multiplicateur de la poussee horizontale des debris
+	public float CircleBreakUpwardBoost = 1.5f;     // poussee verticale supplementaire des debris
+
 	[Header("Chaos")]
 	public float ChaosStrength = 1.5f;
 	public float ChaosOrbitStrength = 0.75f;
@@ -1411,11 +1416,16 @@ if (average_speed > TriangleStableAverageSpeedThreshold)
 
 		if (circlePhaseTimer >= CircleAccelerationDuration)
 		{
-			// Acceleration complete, break all mirrors
+			// Acceleration complete : projette chaque miroir radialement depuis l'anchor.
+			Vector3 anchor = GetResolvedAnchorPoint();
 			for (int i = 0; i < actors.Count; i++)
 			{
-				if (actors[i] != null && !actors[i].IsBroken)
-					actors[i].ForceBreak();
+				if (actors[i] == null || actors[i].IsBroken)
+					continue;
+
+				Vector3 radial = actors[i].WorldPosition - anchor;
+				radial.y = 0f;
+				actors[i].ForceBreakProjected(radial, CircleBreakProjectionForce, CircleBreakUpwardBoost);
 			}
 
 			SetCirclePhase(CirclePhase.Done);

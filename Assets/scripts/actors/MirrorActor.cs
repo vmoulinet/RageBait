@@ -87,6 +87,7 @@ public class MirrorActor : MonoBehaviour
 	float speed_boost_initial_multiplier = 1f;
 	float speed_boost_duration = 0f;
 	float explode_upward_boost = 0f;
+	float break_horizontal_force_multiplier = 1f;
 	bool broken_by_pendulum = false;
 	bool movement_frozen = false;
 
@@ -166,11 +167,20 @@ public class MirrorActor : MonoBehaviour
 
 	// Boost vertical applique aux debris lors d'un bris "explosion en l'air"
 	// (cf. MirrorMeltdown). 0 = bris normal.
-	public float ExplodeUpwardBoost
+	public float ExplodeUpwardBoost
+	{
+		get
+		{
+			return explode_upward_boost;
+		}
+	}
+	// Multiplicateur applique a la composante horizontale de la poussee des debris.
+	// 1 = bris normal. Sert aux bris "projetes" (cf. ForceBreakProjected, fin de la chore Circle).
+	public float BreakHorizontalForceMultiplier
 	{
 		get
 		{
-			return explode_upward_boost;
+			return break_horizontal_force_multiplier;
 		}
 	}
 
@@ -782,6 +792,7 @@ public class MirrorActor : MonoBehaviour
 		last_break_impact_direction = Vector3.zero;
 		last_break_impact_speed = 0f;
 		explode_upward_boost = 0f;
+		break_horizontal_force_multiplier = 1f;
 		broken_by_pendulum = false;
 		CachePanelBaseRotation();
 		panel_x_target = 0f;
@@ -1032,6 +1043,7 @@ public class MirrorActor : MonoBehaviour
 		last_break_impact_direction = Vector3.down;
 		last_break_impact_speed = 0f;
 		explode_upward_boost = 0f;
+		break_horizontal_force_multiplier = 1f;
 		broken_by_pendulum = false;
 		Break(WorldPosition);
 	}
@@ -1047,6 +1059,33 @@ public class MirrorActor : MonoBehaviour
 		last_break_impact_direction = Vector3.zero;
 		last_break_impact_speed = 0f;
 		explode_upward_boost = Mathf.Max(0f, upwardBoost);
+		break_horizontal_force_multiplier = 1f;
+		broken_by_pendulum = false;
+		Break(WorldPosition);
+	}
+
+	// Casse le miroir en projetant ses debris dans une direction horizontale donnee
+	// (ex : radialement depuis le choreography anchor a la fin de la chore Circle).
+	// horizontalDirection : direction de projection (composante Y ignoree).
+	// forceMultiplier : facteur applique a la poussee horizontale des debris (1 = bris normal).
+	// upwardBoost : poussee verticale supplementaire ajoutee aux debris.
+	public void ForceBreakProjected(Vector3 horizontalDirection, float forceMultiplier, float upwardBoost)
+	{
+		if (is_broken)
+			return;
+
+		Vector3 flat_direction = horizontalDirection;
+		flat_direction.y = 0f;
+		if (flat_direction.sqrMagnitude > 0.0001f)
+			flat_direction = flat_direction.normalized;
+		else
+			flat_direction = Vector3.zero;
+
+		last_break_impact_velocity = Vector3.zero;
+		last_break_impact_direction = flat_direction;
+		last_break_impact_speed = 0f;
+		explode_upward_boost = Mathf.Max(0f, upwardBoost);
+		break_horizontal_force_multiplier = Mathf.Max(0f, forceMultiplier);
 		broken_by_pendulum = false;
 		Break(WorldPosition);
 	}
