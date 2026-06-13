@@ -61,6 +61,60 @@ public class SoundManager : MonoBehaviour
 	[Header("Debug")]
 	public bool DebugSound = false;
 
+	// Live mix multipliers driven by the debug-menu sliders. The preset volumes
+	// above stay untouched; each slider scales its source: 1 = preset as-is,
+	// 2 = twice as loud, 0 = silent. Effective volume = preset * multiplier.
+	// Persisted to PlayerPrefs so a build remembers them between launches.
+	[HideInInspector] public float MirrorBreakVolumeMult = 1f;
+	[HideInInspector] public float StompVolumeMult = 1f;
+	[HideInInspector] public float PendulumLoopVolumeMult = 1f;
+	[HideInInspector] public float TypingLoopVolumeMult = 1f;
+	[HideInInspector] public float DaddyLoopVolumeMult = 1f;
+
+	const string PREF_MIRROR_MULT = "mix.mirror_shatter";
+	const string PREF_STOMP_MULT = "mix.stomp";
+	const string PREF_PENDULUM_MULT = "mix.pendulum";
+	const string PREF_TYPING_MULT = "mix.typing";
+	const string PREF_SOUNDTRACK_MULT = "mix.soundtrack";
+
+	// Loads saved multipliers (falling back to the current values). Called from
+	// Awake so the loops start at the persisted mix even when the debug menu is
+	// inactive at launch.
+	public void LoadVolumeMultipliers()
+	{
+		MirrorBreakVolumeMult = PlayerPrefs.GetFloat(PREF_MIRROR_MULT, MirrorBreakVolumeMult);
+		StompVolumeMult = PlayerPrefs.GetFloat(PREF_STOMP_MULT, StompVolumeMult);
+		PendulumLoopVolumeMult = PlayerPrefs.GetFloat(PREF_PENDULUM_MULT, PendulumLoopVolumeMult);
+		TypingLoopVolumeMult = PlayerPrefs.GetFloat(PREF_TYPING_MULT, TypingLoopVolumeMult);
+		DaddyLoopVolumeMult = PlayerPrefs.GetFloat(PREF_SOUNDTRACK_MULT, DaddyLoopVolumeMult);
+	}
+
+	// Writes the current multipliers and flushes to disk.
+	public void SaveVolumeMultipliers()
+	{
+		PlayerPrefs.SetFloat(PREF_MIRROR_MULT, MirrorBreakVolumeMult);
+		PlayerPrefs.SetFloat(PREF_STOMP_MULT, StompVolumeMult);
+		PlayerPrefs.SetFloat(PREF_PENDULUM_MULT, PendulumLoopVolumeMult);
+		PlayerPrefs.SetFloat(PREF_TYPING_MULT, TypingLoopVolumeMult);
+		PlayerPrefs.SetFloat(PREF_SOUNDTRACK_MULT, DaddyLoopVolumeMult);
+		PlayerPrefs.Save();
+	}
+
+	// AudioSource.volume tolerates values above 1; this is just a sane safety cap
+	// (loudest preset ~5 * a 2x slider).
+	public const float MaxVolume = 10f;
+
+	static float Clamp_volume(float value)
+	{
+		return Mathf.Clamp(value, 0f, MaxVolume);
+	}
+
+	float Mirror_break_mix_volume { get { return Clamp_volume(MirrorBreakVolume * MirrorBreakVolumeMult); } }
+	float Stomp_mix_volume { get { return Clamp_volume(StompVolume * StompVolumeMult); } }
+	float Pendulum_mix_volume { get { return Clamp_volume(PendulumLoopVolume * PendulumLoopVolumeMult); } }
+	float Typing_mix_volume { get { return Clamp_volume(TypingLoopVolume * TypingLoopVolumeMult); } }
+	float Daddy_mix_volume { get { return Clamp_volume(DaddyLoopVolume * DaddyLoopVolumeMult); } }
+
 	bool typing_loop_running = false;
 	int typing_loop_suspend_count = 0;
 
@@ -86,7 +140,21 @@ public class SoundManager : MonoBehaviour
 
 	void Awake()
 	{
+		LoadVolumeMultipliers();
 		Ensure_audio_sources();
+	}
+
+	// Safety net: persist the mix on quit/pause even if the debug menu object was
+	// inactive (e.g. closed) when the app exits. SoundManager is always active.
+	void OnApplicationQuit()
+	{
+		SaveVolumeMultipliers();
+	}
+
+	void OnApplicationPause(bool paused)
+	{
+		if (paused)
+			SaveVolumeMultipliers();
 	}
 
 	Transform Get_runtime_root()
@@ -132,7 +200,7 @@ public class SoundManager : MonoBehaviour
 			TypingLoopSource.clip = TypingLoopClip;
 
 		if (TypingLoopSource != null)
-			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
+			TypingLoopSource.volume = Typing_mix_volume;
 
 		Ensure_typing_reverb();
 
@@ -146,7 +214,7 @@ public class SoundManager : MonoBehaviour
 			DaddyLoopSource.clip = DaddyLoopClip;
 
 		if (DaddyLoopSource != null)
-			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+			DaddyLoopSource.volume = Daddy_mix_volume;
 	}
 
 	void Ensure_typing_reverb()
@@ -243,7 +311,7 @@ public class SoundManager : MonoBehaviour
 
 		Start_loop_if_needed(DaddyLoopSource, DaddyLoopClip);
 		if (DaddyLoopSource != null)
-			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+			DaddyLoopSource.volume = Daddy_mix_volume;
 	}
 
 	void Start_loop_if_needed(AudioSource source, AudioClip clip)
@@ -263,7 +331,7 @@ public class SoundManager : MonoBehaviour
 
 	public void PlayMirrorBreak(Vector3 world_position)
 	{
-		Play_one_shot(MirrorBreakClips, world_position, MirrorBreakVolume, MirrorBreakPitchRandom, MirrorBreakSpatialBlend, "mirror_break", MirrorBreakReverbEnabled);
+		Play_one_shot(MirrorBreakClips, world_position, Mirror_break_mix_volume, MirrorBreakPitchRandom, MirrorBreakSpatialBlend, "mirror_break", MirrorBreakReverbEnabled);
 	}
 
 	public void PlayStomp()
@@ -273,7 +341,7 @@ public class SoundManager : MonoBehaviour
 
 	public void PlayStomp(Vector3 world_position)
 	{
-		Play_one_shot(StompClips, world_position, StompVolume, StompPitchRandom, StompSpatialBlend, "stomp");
+		Play_one_shot(StompClips, world_position, Stomp_mix_volume, StompPitchRandom, StompSpatialBlend, "stomp");
 	}
 
 	void Play_one_shot(AudioClip[] clips, Vector3 world_position, float volume, float pitch_random, float spatial_blend, string label, bool apply_reverb = false)
@@ -303,7 +371,7 @@ public class SoundManager : MonoBehaviour
 			Configure_mirror_break_reverb(reverb);
 		}
 
-		source.PlayOneShot(clip, Mathf.Max(0f, volume));
+		source.PlayOneShot(clip, Clamp_volume(volume));
 
 		Destroy(one_shot_object, clip.length / Mathf.Max(0.01f, Mathf.Abs(pitch)) + 0.1f);
 
@@ -381,7 +449,7 @@ public class SoundManager : MonoBehaviour
 			if (TypingLoopSource.clip == null && TypingLoopClip != null)
 				TypingLoopSource.clip = TypingLoopClip;
 
-			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
+			TypingLoopSource.volume = Typing_mix_volume;
 			TypingLoopSource.loop = true;
 
 			if (TypingLoopSource.clip != null && !TypingLoopSource.isPlaying)
@@ -409,7 +477,7 @@ public class SoundManager : MonoBehaviour
 			if (DaddyLoopSource.clip == null && DaddyLoopClip != null)
 				DaddyLoopSource.clip = DaddyLoopClip;
 
-			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+			DaddyLoopSource.volume = Daddy_mix_volume;
 
 			DaddyLoopSource.loop = true;
 
@@ -443,7 +511,7 @@ public class SoundManager : MonoBehaviour
 		if (TypingLoopSource != null && TypingLoopSource.clip != null)
 		{
 			TypingLoopSource.loop = true;
-			TypingLoopSource.volume = Mathf.Clamp01(TypingLoopVolume);
+			TypingLoopSource.volume = Typing_mix_volume;
 		}
 
 		Apply_typing_reverb();
@@ -451,7 +519,7 @@ public class SoundManager : MonoBehaviour
 		if (DaddyLoopSource != null && DaddyLoopSource.clip != null)
 		{
 			DaddyLoopSource.loop = true;
-			DaddyLoopSource.volume = Mathf.Clamp01(DaddyLoopVolume);
+			DaddyLoopSource.volume = Daddy_mix_volume;
 
 			if (!DaddyLoopSource.isPlaying)
 				DaddyLoopSource.Play();
@@ -495,7 +563,7 @@ public class SoundManager : MonoBehaviour
 				continue;
 
 			source.panStereo = current_pendulum_pan;
-			source.volume = current_pendulum_volume * Mathf.Clamp01(PendulumLoopVolume);
+			source.volume = current_pendulum_volume * Pendulum_mix_volume;
 		}
 	}
 }
