@@ -4,6 +4,8 @@ using UnityEngine.EventSystems;
 public class DebugMenuManager : MonoBehaviour
 {
 	public GameObject VisualRoot;
+	[Tooltip("Objets activés/désactivés en même temps que le debug menu, sans être déplacés (ex: WordTOPDOWNCanvas).")]
+	public GameObject[] ExtraRoots;
 	public GameObject FirstSelected;
 
 	bool is_open = false;
@@ -38,6 +40,15 @@ public class DebugMenuManager : MonoBehaviour
 
 		if (VisualRoot != null)
 			VisualRoot.SetActive(open);
+
+		if (ExtraRoots != null)
+		{
+			for (int i = 0; i < ExtraRoots.Length; i++)
+			{
+				if (ExtraRoots[i] != null)
+					ExtraRoots[i].SetActive(open);
+			}
+		}
 
 	// pause on menu open	Time.timeScale = open ? 0f : 1f;
 		Cursor.lockState = open ? CursorLockMode.None : CursorLockMode.Locked;

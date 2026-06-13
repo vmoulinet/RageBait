@@ -21,6 +21,10 @@ public class WorldValidation : MonoBehaviour
 	[Tooltip("Used to find each mirror's Individual PointLight.")]
 	public MirrorManager MirrorManager;
 
+	[Header("Audio")]
+	[Tooltip("Pause the typing loop while the world validation event plays. Disable to keep the typing loop running during the event.")]
+	public bool SuspendTypingDuringEvent = true;
+
 	[Header("Timing")]
 	public float AttractDuration = 2.0f;
 	public float PropelDelay = 0.3f;
@@ -122,7 +126,7 @@ public class WorldValidation : MonoBehaviour
 		if (DaddyLetterProjector != null)
 			DaddyLetterProjector.NotifyWorldValidation();
 
-		if (SoundManager != null)
+		if (SuspendTypingDuringEvent && SoundManager != null)
 			SoundManager.SuspendTypingLoopForEvent();
 
 		if (DebugLog)
@@ -179,7 +183,7 @@ public class WorldValidation : MonoBehaviour
 			RestoreState();
 			RestoreIndividualLights();
 
-			if (SoundManager != null)
+			if (SuspendTypingDuringEvent && SoundManager != null)
 				SoundManager.ResumeTypingLoopAfterEvent();
 
 			// Ripple is fired early via MaybeFireRipple() (RippleLeadTime before Done).
