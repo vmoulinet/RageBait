@@ -53,6 +53,8 @@
 #include <HX711.h>
 #include <Adafruit_NeoPixel.h>
 #include <Preferences.h>
+#include <esp_wifi.h>
+#include <esp_pm.h>
 
 // ─── LED ─────────────────────────────────────────────────────────────────────
 #define LED_PIN           13
@@ -149,6 +151,8 @@ float CALIBRATION_FACTOR[NUM_SCALES] = {
   12000.0f,
 };
 
+// Cadence d'echantillonnage/detection des HX711 (rapide pour ne rater aucun
+// stomp). /force sort sur Serial a cette cadence ; rien ne part en reseau.
 const unsigned long SEND_INTERVAL_MS = 12;
 
 #define MED_SIZE 5
@@ -201,16 +205,21 @@ bool lowBattery = false;
 
 // ─── OSC helpers ─────────────────────────────────────────────────────────────
 void sendOSC(const char* address, float value) {
-  // Toujours emettre en Serial au format parse par monitor.py :
+  // Emission Serial au format parse par monitor.py :
   //   /force -> "FORCE/<val>"   |   /stomp -> "STOMP/<val>"
-  // Permet le mode Serial only (NET_NONE) ET sert de debug en reseau.
-  if (strcmp(address, "/force") == 0) {
+  bool isForce = (strcmp(address, "/force") == 0);
+  if (isForce) {
     Serial.print("FORCE/");
     Serial.println(value, 2);
   } else if (strcmp(address, "/stomp") == 0) {
     Serial.print("STOMP/");
     Serial.println(value, 2);
   }
+
+  // /force ne part JAMAIS en reseau : seul le /stomp interesse Unity. Garder la
+  // radio WiFi endormie entre les stomps est ce qui permet le modem-sleep et
+  // l'autonomie. /force reste disponible uniquement en Serial (USB branche).
+  if (isForce) return;
 
   if (netMode == NET_NONE) return;
   OSCMessage msg(address);
@@ -227,8 +236,20 @@ void sendOSC(const char* address, float value) {
   }
 }
 
+unsigned long lastPongTime = 0;
+const unsigned long PONG_INTERVAL_MS = 60000;
+
 void handlePing(IPAddress from) {
+  // On rafraichit TOUJOURS l'IP d'Unity (retour unicast rapide apres
+  // reconnexion), meme si on ne repond pas a chaque ping.
   unityIP = from;
+
+  // /alive throttle : on ne repond qu'une fois par minute. Le premier ping
+  // (lastPongTime == 0) repond immediatement pour signaler la presence au boot.
+  unsigned long now = millis();
+  if (lastPongTime != 0 && now - lastPongTime < PONG_INTERVAL_MS) return;
+  lastPongTime = now;
+
   OSCMessage pong("/pong");
   // En Ethernet on envoie juste 1.0. En WiFi on garde la convention ForceOSC
   // (RSSI). Le monitor gere les deux.
@@ -341,6 +362,22 @@ bool tryWiFi() {
   wifiUdp.begin(OSC_IN_PORT);
   Serial.print("      [OK] WiFi connecte, IP : ");
   Serial.println(WiFi.localIP());
+
+  // ─── Economie d'energie WiFi (modem-sleep) ─────────────────────────────────
+  // La radio s'endort entre les beacons DTIM et se reveille juste assez pour
+  // rester associee : ~120mA -> ~20-30mA moyen. Comme /force ne part pas en
+  // reseau, la radio ne se reveille en TX que pour les /stomp (rares). Seule la
+  // reception de /ping subit une legere latence, sans importance ici.
+  WiFi.setSleep(WIFI_PS_MAX_MODEM);
+  // listen_interval = nombre de beacons (≈100ms) entre deux reveils. Plus haut
+  // = moins de conso, plus de latence RX. 10 ≈ reveil toutes les ~1s.
+  wifi_config_t cfg;
+  if (esp_wifi_get_config(WIFI_IF_STA, &cfg) == ESP_OK) {
+    cfg.sta.listen_interval = 10;
+    esp_wifi_set_config(WIFI_IF_STA, &cfg);
+  }
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  Serial.println("      [PWR] WiFi modem-sleep actif (listen_interval=10)");
   return true;
 }
 
@@ -377,12 +414,30 @@ void setup() {
   Serial.println();
   Serial.println("=== ForceOSCeth ===");
 
+  // ─── Economie d'energie CPU ────────────────────────────────────────────────
+  // 80MHz est la frequence minimale compatible WiFi. Suffisant pour lire 4
+  // HX711 et envoyer de l'UDP ; reduit nettement la conso vs 240MHz.
+  setCpuFrequencyMhz(80);
+  Serial.printf("[PWR] CPU @ %d MHz\n", getCpuFrequencyMhz());
+
   handleBootCounter();
 
-  // Alim NeoPixel onboard
-#ifdef NEOPIXEL_POWER
+  // Alim NeoPixel onboard. Selon la board selectionnee / la version du core
+  // ESP32, la macro de la pin d'alim change de nom. On les essaie toutes.
+#if defined(NEOPIXEL_POWER)
   pinMode(NEOPIXEL_POWER, OUTPUT);
   digitalWrite(NEOPIXEL_POWER, HIGH);
+  Serial.println("LED: alim onboard via NEOPIXEL_POWER");
+#elif defined(PIN_NEOPIXEL_POWER)
+  pinMode(PIN_NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(PIN_NEOPIXEL_POWER, HIGH);
+  Serial.println("LED: alim onboard via PIN_NEOPIXEL_POWER");
+#elif defined(NEOPIXEL_I2C_POWER)
+  pinMode(NEOPIXEL_I2C_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_I2C_POWER, HIGH);
+  Serial.println("LED: alim onboard via NEOPIXEL_I2C_POWER");
+#else
+  Serial.println("LED: [!] aucune macro d'alim onboard definie (board mal selectionnee ?)");
 #endif
 
   led.begin();
@@ -563,6 +618,7 @@ void loop() {
     ledFlash(COL_YELLOW, 120);
   }
 
+  // /force : sortie Serial uniquement (sendOSC ne l'emet jamais en reseau).
   sendOSC("/force", raw);
 
   rawBefore = raw;

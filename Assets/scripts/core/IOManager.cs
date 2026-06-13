@@ -35,7 +35,7 @@ public class IOManager : MonoBehaviour
 	public bool EnablePing = true;
 	public float PingInterval = 5f;
 	public string PingAddress = "/ping";
-	public float PongTimeout = 8f;
+	public float PongTimeout = 90f;
 
 	[Header("WiFi")]
 	public bool EnableWifiPolling = true;
